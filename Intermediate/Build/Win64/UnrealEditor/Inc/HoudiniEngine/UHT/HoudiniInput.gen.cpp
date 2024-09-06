@@ -20,7 +20,6 @@ void EmptyLinkFunctionForGeneratedCodeHoudiniInput() {}
 	HOUDINIENGINE_API UEnum* Z_Construct_UEnum_HoudiniEngine_EHoudiniInputType();
 	HOUDINIENGINE_API UEnum* Z_Construct_UEnum_HoudiniEngine_EHoudiniMaskType();
 	HOUDINIENGINE_API UEnum* Z_Construct_UEnum_HoudiniEngine_EHoudiniMeshCollisionImportMethod();
-	HOUDINIENGINE_API UEnum* Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod();
 	HOUDINIENGINE_API UEnum* Z_Construct_UEnum_HoudiniEngine_EHoudiniStaticMeshLODImportMethod();
 	HOUDINIENGINE_API UScriptStruct* Z_Construct_UScriptStruct_FHoudiniInputSettings();
 	UPackage* Z_Construct_UPackage__Script_HoudiniEngine();
@@ -148,68 +147,6 @@ void EmptyLinkFunctionForGeneratedCodeHoudiniInput() {}
 			UECodeGen_Private::ConstructUEnum(Z_Registration_Info_UEnum_EHoudiniActorFilterMethod.InnerSingleton, Z_Construct_UEnum_HoudiniEngine_EHoudiniActorFilterMethod_Statics::EnumParams);
 		}
 		return Z_Registration_Info_UEnum_EHoudiniActorFilterMethod.InnerSingleton;
-	}
-	static FEnumRegistrationInfo Z_Registration_Info_UEnum_EHoudiniPaintUpdateMethod;
-	static UEnum* EHoudiniPaintUpdateMethod_StaticEnum()
-	{
-		if (!Z_Registration_Info_UEnum_EHoudiniPaintUpdateMethod.OuterSingleton)
-		{
-			Z_Registration_Info_UEnum_EHoudiniPaintUpdateMethod.OuterSingleton = GetStaticEnum(Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod, (UObject*)Z_Construct_UPackage__Script_HoudiniEngine(), TEXT("EHoudiniPaintUpdateMethod"));
-		}
-		return Z_Registration_Info_UEnum_EHoudiniPaintUpdateMethod.OuterSingleton;
-	}
-	template<> HOUDINIENGINE_API UEnum* StaticEnum<EHoudiniPaintUpdateMethod>()
-	{
-		return EHoudiniPaintUpdateMethod_StaticEnum();
-	}
-	struct Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod_Statics
-	{
-		static const UECodeGen_Private::FEnumeratorParam Enumerators[];
-#if WITH_METADATA
-		static const UECodeGen_Private::FMetaDataPairParam Enum_MetaDataParams[];
-#endif
-		static const UECodeGen_Private::FEnumParams EnumParams;
-	};
-	const UECodeGen_Private::FEnumeratorParam Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod_Statics::Enumerators[] = {
-		{ "EHoudiniPaintUpdateMethod::Manual", (int64)EHoudiniPaintUpdateMethod::Manual },
-		{ "EHoudiniPaintUpdateMethod::EnterPressed", (int64)EHoudiniPaintUpdateMethod::EnterPressed },
-		{ "EHoudiniPaintUpdateMethod::Brushed", (int64)EHoudiniPaintUpdateMethod::Brushed },
-		{ "EHoudiniPaintUpdateMethod::EveryCook", (int64)EHoudiniPaintUpdateMethod::EveryCook },
-	};
-#if WITH_METADATA
-	const UECodeGen_Private::FMetaDataPairParam Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod_Statics::Enum_MetaDataParams[] = {
-		{ "Brushed.Comment", "// \"Enter\" pressed or exit landscape edmode\n" },
-		{ "Brushed.Name", "EHoudiniPaintUpdateMethod::Brushed" },
-		{ "Brushed.ToolTip", "\"Enter\" pressed or exit landscape edmode" },
-		{ "EnterPressed.Comment", "// Import manually\n" },
-		{ "EnterPressed.Name", "EHoudiniPaintUpdateMethod::EnterPressed" },
-		{ "EnterPressed.ToolTip", "Import manually" },
-		{ "EveryCook.Comment", "// While brushing and mouse released\n" },
-		{ "EveryCook.Name", "EHoudiniPaintUpdateMethod::EveryCook" },
-		{ "EveryCook.ToolTip", "While brushing and mouse released" },
-		{ "Manual.Name", "EHoudiniPaintUpdateMethod::Manual" },
-		{ "ModuleRelativePath", "Public/HoudiniInput.h" },
-	};
-#endif
-	const UECodeGen_Private::FEnumParams Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod_Statics::EnumParams = {
-		(UObject*(*)())Z_Construct_UPackage__Script_HoudiniEngine,
-		nullptr,
-		"EHoudiniPaintUpdateMethod",
-		"EHoudiniPaintUpdateMethod",
-		Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod_Statics::Enumerators,
-		RF_Public|RF_Transient|RF_MarkAsNative,
-		UE_ARRAY_COUNT(Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod_Statics::Enumerators),
-		EEnumFlags::None,
-		(uint8)UEnum::ECppForm::EnumClass,
-		METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod_Statics::Enum_MetaDataParams), Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod_Statics::Enum_MetaDataParams)
-	};
-	UEnum* Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod()
-	{
-		if (!Z_Registration_Info_UEnum_EHoudiniPaintUpdateMethod.InnerSingleton)
-		{
-			UECodeGen_Private::ConstructUEnum(Z_Registration_Info_UEnum_EHoudiniPaintUpdateMethod.InnerSingleton, Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod_Statics::EnumParams);
-		}
-		return Z_Registration_Info_UEnum_EHoudiniPaintUpdateMethod.InnerSingleton;
 	}
 	static FEnumRegistrationInfo Z_Registration_Info_UEnum_EHoudiniMaskType;
 	static UEnum* EHoudiniMaskType_StaticEnum()
@@ -481,11 +418,6 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 		static const UECodeGen_Private::FMetaDataPairParam NewProp_LandscapeLayerFilterMap_MetaData[];
 #endif
 		static const UECodeGen_Private::FMapPropertyParams NewProp_LandscapeLayerFilterMap;
-		static const UECodeGen_Private::FIntPropertyParams NewProp_PaintUpdateMethod_Underlying;
-#if WITH_METADATA
-		static const UECodeGen_Private::FMetaDataPairParam NewProp_PaintUpdateMethod_MetaData[];
-#endif
-		static const UECodeGen_Private::FEnumPropertyParams NewProp_PaintUpdateMethod;
 		static const UECodeGen_Private::FIntPropertyParams NewProp_MaskType_Underlying;
 #if WITH_METADATA
 		static const UECodeGen_Private::FMetaDataPairParam NewProp_MaskType_MetaData[];
@@ -549,11 +481,11 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 #if WITH_METADATA
 	const UECodeGen_Private::FMetaDataPairParam Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_Filters_MetaData[] = {
 #if !UE_BUILD_SHIPPING
-		{ "Comment", "// for Content, Landscape\n" },
+		{ "Comment", "// for Content, World\n" },
 #endif
 		{ "ModuleRelativePath", "Public/HoudiniInput.h" },
 #if !UE_BUILD_SHIPPING
-		{ "ToolTip", "for Content, Landscape" },
+		{ "ToolTip", "for Content, World" },
 #endif
 	};
 #endif
@@ -725,13 +657,6 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 	};
 #endif
 	const UECodeGen_Private::FMapPropertyParams Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_LandscapeLayerFilterMap = { "LandscapeLayerFilterMap", nullptr, (EPropertyFlags)0x0010000000000000, UECodeGen_Private::EPropertyGenFlags::Map, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(FHoudiniInputSettings, LandscapeLayerFilterMap), EMapPropertyFlags::None, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_LandscapeLayerFilterMap_MetaData), Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_LandscapeLayerFilterMap_MetaData) };
-	const UECodeGen_Private::FIntPropertyParams Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_PaintUpdateMethod_Underlying = { "UnderlyingType", nullptr, (EPropertyFlags)0x0000000000000000, UECodeGen_Private::EPropertyGenFlags::Int, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, 0, METADATA_PARAMS(0, nullptr) };
-#if WITH_METADATA
-	const UECodeGen_Private::FMetaDataPairParam Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_PaintUpdateMethod_MetaData[] = {
-		{ "ModuleRelativePath", "Public/HoudiniInput.h" },
-	};
-#endif
-	const UECodeGen_Private::FEnumPropertyParams Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_PaintUpdateMethod = { "PaintUpdateMethod", nullptr, (EPropertyFlags)0x0010000000000000, UECodeGen_Private::EPropertyGenFlags::Enum, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(FHoudiniInputSettings, PaintUpdateMethod), Z_Construct_UEnum_HoudiniEngine_EHoudiniPaintUpdateMethod, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_PaintUpdateMethod_MetaData), Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_PaintUpdateMethod_MetaData) }; // 3772229188
 	const UECodeGen_Private::FIntPropertyParams Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_MaskType_Underlying = { "UnderlyingType", nullptr, (EPropertyFlags)0x0000000000000000, UECodeGen_Private::EPropertyGenFlags::Int, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, 0, METADATA_PARAMS(0, nullptr) };
 #if WITH_METADATA
 	const UECodeGen_Private::FMetaDataPairParam Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_MaskType_MetaData[] = {
@@ -780,8 +705,6 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_LandscapeLayerFilterMap_ValueProp,
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_LandscapeLayerFilterMap_Key_KeyProp,
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_LandscapeLayerFilterMap,
-		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_PaintUpdateMethod_Underlying,
-		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_PaintUpdateMethod,
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_MaskType_Underlying,
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_MaskType,
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_ByteMaskValueParmName,
@@ -894,7 +817,7 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 		{ "ModuleRelativePath", "Public/HoudiniInput.h" },
 	};
 #endif
-	const UECodeGen_Private::FStructPropertyParams Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings = { "Settings", nullptr, (EPropertyFlags)0x0020080000000000, UECodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(UHoudiniInput, Settings), Z_Construct_UScriptStruct_FHoudiniInputSettings, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings_MetaData), Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings_MetaData) }; // 3698320837
+	const UECodeGen_Private::FStructPropertyParams Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings = { "Settings", nullptr, (EPropertyFlags)0x0020080000000000, UECodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(UHoudiniInput, Settings), Z_Construct_UScriptStruct_FHoudiniInputSettings, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings_MetaData), Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings_MetaData) }; // 2674336707
 	const UECodeGen_Private::FObjectPtrPropertyParams Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Holders_Inner = { "Holders", nullptr, (EPropertyFlags)0x0004000000000000, UECodeGen_Private::EPropertyGenFlags::Object | UECodeGen_Private::EPropertyGenFlags::ObjectPtr, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, 0, Z_Construct_UClass_UHoudiniInputHolder_NoRegister, METADATA_PARAMS(0, nullptr) };
 #if WITH_METADATA
 	const UECodeGen_Private::FMetaDataPairParam Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Holders_MetaData[] = {
@@ -1038,19 +961,18 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 	const FEnumRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::EnumInfo[] = {
 		{ EHoudiniInputType_StaticEnum, TEXT("EHoudiniInputType"), &Z_Registration_Info_UEnum_EHoudiniInputType, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 1015763725U) },
 		{ EHoudiniActorFilterMethod_StaticEnum, TEXT("EHoudiniActorFilterMethod"), &Z_Registration_Info_UEnum_EHoudiniActorFilterMethod, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 1660427854U) },
-		{ EHoudiniPaintUpdateMethod_StaticEnum, TEXT("EHoudiniPaintUpdateMethod"), &Z_Registration_Info_UEnum_EHoudiniPaintUpdateMethod, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 3772229188U) },
 		{ EHoudiniMaskType_StaticEnum, TEXT("EHoudiniMaskType"), &Z_Registration_Info_UEnum_EHoudiniMaskType, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 4190280730U) },
 		{ EHoudiniStaticMeshLODImportMethod_StaticEnum, TEXT("EHoudiniStaticMeshLODImportMethod"), &Z_Registration_Info_UEnum_EHoudiniStaticMeshLODImportMethod, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 3967882074U) },
 		{ EHoudiniMeshCollisionImportMethod_StaticEnum, TEXT("EHoudiniMeshCollisionImportMethod"), &Z_Registration_Info_UEnum_EHoudiniMeshCollisionImportMethod, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 1472608697U) },
 	};
 	const FStructRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ScriptStructInfo[] = {
-		{ FHoudiniInputSettings::StaticStruct, Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewStructOps, TEXT("HoudiniInputSettings"), &Z_Registration_Info_UScriptStruct_HoudiniInputSettings, CONSTRUCT_RELOAD_VERSION_INFO(FStructReloadVersionInfo, sizeof(FHoudiniInputSettings), 3698320837U) },
+		{ FHoudiniInputSettings::StaticStruct, Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewStructOps, TEXT("HoudiniInputSettings"), &Z_Registration_Info_UScriptStruct_HoudiniInputSettings, CONSTRUCT_RELOAD_VERSION_INFO(FStructReloadVersionInfo, sizeof(FHoudiniInputSettings), 2674336707U) },
 	};
 	const FClassRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ClassInfo[] = {
-		{ Z_Construct_UClass_UHoudiniInput, UHoudiniInput::StaticClass, TEXT("UHoudiniInput"), &Z_Registration_Info_UClass_UHoudiniInput, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UHoudiniInput), 2442615488U) },
+		{ Z_Construct_UClass_UHoudiniInput, UHoudiniInput::StaticClass, TEXT("UHoudiniInput"), &Z_Registration_Info_UClass_UHoudiniInput, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UHoudiniInput), 2032815733U) },
 		{ Z_Construct_UClass_UHoudiniInputHolder, UHoudiniInputHolder::StaticClass, TEXT("UHoudiniInputHolder"), &Z_Registration_Info_UClass_UHoudiniInputHolder, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UHoudiniInputHolder), 88738796U) },
 	};
-	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_2445529876(TEXT("/Script/HoudiniEngine"),
+	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_2839702895(TEXT("/Script/HoudiniEngine"),
 		Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ClassInfo),
 		Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ScriptStructInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ScriptStructInfo),
 		Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::EnumInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::EnumInfo));

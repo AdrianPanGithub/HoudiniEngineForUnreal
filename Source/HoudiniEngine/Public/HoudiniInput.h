@@ -34,15 +34,6 @@ enum class EHoudiniActorFilterMethod
 };
 
 UENUM()
-enum class EHoudiniPaintUpdateMethod
-{
-	Manual = 0,  // Import manually
-	EnterPressed,  // "Enter" pressed or exit landscape edmode
-	Brushed,  // While brushing and mouse released
-	EveryCook  // While brushing, and when node cook triggered
-};
-
-UENUM()
 enum class EHoudiniMaskType
 {
 	Bit = 0,
@@ -77,7 +68,7 @@ struct HOUDINIENGINE_API FHoudiniInputSettings  // All of the settings could set
 	bool bImportAsReference = false;  // for Content, World
 
 	UPROPERTY()
-	bool bCheckChanged = true;  // for Content, Landscape
+	bool bCheckChanged = true;  // for Content, World
 
 	UPROPERTY()
 	TArray<FString> Filters;  // for Content, Node, and World
@@ -133,9 +124,6 @@ struct HOUDINIENGINE_API FHoudiniInputSettings  // All of the settings could set
 
 	UPROPERTY()
 	TMap<FName, FString> LandscapeLayerFilterMap;
-
-	UPROPERTY()
-	EHoudiniPaintUpdateMethod PaintUpdateMethod = EHoudiniPaintUpdateMethod::Manual;
 
 	// -------- Mask ---------
 	UPROPERTY()
@@ -212,6 +200,8 @@ public:
 
 	FORCEINLINE const FHoudiniInputSettings& GetSettings() const { return Settings; }
 	
+	FORCEINLINE const bool& IsPendingClear() const { return bPendingClear; }
+
 	void SetType(const EHoudiniInputType& InNewType);
 
 
@@ -279,8 +269,6 @@ public:
 
 	void SetImportLandscapeSplines(const bool& bImportLandscapeSplines);
 
-	void SetPaintUpdateMethod(const EHoudiniPaintUpdateMethod& PaintUpdateMethod);
-
 	void SetMaskType(const EHoudiniMaskType& MaskType);
 
 	void SetByteMaskValueParmName(const FString& ValueParmName);
@@ -316,6 +304,8 @@ protected:
 	FORCEINLINE const FHoudiniInputSettings& GetSettings() const { return GetInput()->GetSettings(); }
 
 public:
+	FORCEINLINE const bool& ShouldCheckChanged() const { return GetSettings().bCheckChanged; }
+
 	FORCEINLINE void MarkChanged(const bool& bChanged) { bHasChanged = bChanged; }
 
 	virtual TSoftObjectPtr<UObject> GetAsset() const { return nullptr; }

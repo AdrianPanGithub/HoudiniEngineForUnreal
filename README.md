@@ -63,9 +63,9 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 02. All output types support partial update, including meshes, instancers, landscapes, geometry collection (chaos), curves.
 03. All output support generated to the split actors (i@unreal_split_actors = 1) rather than attach to parent Houdini Actors, and could set these split actors' properties by unreal_uproperty_* attributes, which means you could begin play in editor directly without baking output in a World-Partition level.
 04. So Baking is deprecated, use i@unreal_split_actors = 1 instead.
-06. Support Texture output (As a HAPI bug, must add my sharedmemory_volumeoutput Sop to your HDA)
+06. Support Texture output (volumevisualmode = "image", and as a HAPI bug, must add my sharedmemory_volumeoutput Sop to your HDA)
 07. Landscape output support shared memory output (6x faster than official shared-memory session, need to add my sharedmemory_volumeoutput Sop to your HDA)
-08. Class Instancer output is 40x faster than official plug-in, also support instantiate USceneComponent derived Classes
+08. Class Instancer output is 40x faster than official plug-in, also support instantiate USceneComponent derived Classes(e.g. SplineMeshComponent, PointLightComponent etc.)
 09. Geometry Collection (Chaos) output as instancers (s@unreal_output_instance_type = "GC"), all of the settings on UGeometryCollection could be set by unreal_uproperty_*, also support split and partial output
 10. Support Static/AnimatedSparseVolumeTexture (VDBs) output
 11. Support Dynamic Mesh (Geometry Script, s@unreal_output_mesh_type = "dynamic") Output
