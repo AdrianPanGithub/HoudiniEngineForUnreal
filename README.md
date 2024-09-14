@@ -38,13 +38,14 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 
 **Paramerter**:
 01. Much more robust nested parameter support.
-02. All parameters support copy and paste.
-03. Fully Menu support, support menu script (dynamic menu), support "normal", "replace", "toggle" menu types.
+02. All parameters support revert, including ramps.
+03. All parameters support copy and paste.
+04. Fully Menu support, support menu script (dynamic menu), support "normal", "replace", "toggle" menu types.
 
-04. ... (And Much More)
+05. ... (And Much More)
 
 **Input**:
-01. Much more intutive way to draw input curves, support fuse/split points and join/detach curves, support free-hand curve drawing.
+01. Much more intutive way to draw input curves (press **Enter** to end/start), support fuse/split points and join/detach curves, support free-hand (**Shift** pressing) curve drawing.
 02. Support Landscape Mask brush input with mask types of Bit, Byte, and Weight
 03. Landscape layers input could be specified for individual editlayer and layer;
 04. Landscape layers input support update while brushing.

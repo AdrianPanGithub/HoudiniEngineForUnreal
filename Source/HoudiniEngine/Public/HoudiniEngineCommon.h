@@ -354,6 +354,8 @@ TEXT("");
 #define HAPI_PARM_TAG_COOK_ON_SELECT                        "cook_on_select"
 #define HAPI_PARM_TAG_IDENTIFIER_NAME                       "identifier_name"
 
+#define HAPI_PARM_TAG_CHECK_CHANGED                         "check_changed"
+
 #define HAPI_PARM_TAG_UNREAL_REF				        	"unreal_ref"
 #define HAPI_PARM_TAG_UNREAL_REF_CLASS                      "unreal_ref_class"
 #define HAPI_PARM_TAG_UNREAL_REF_FILTER                     "unreal_ref_filter"
