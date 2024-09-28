@@ -13,7 +13,7 @@ class UHoudiniInputHolder;
 
 
 UENUM()
-enum class EHoudiniInputType
+enum class EHoudiniInputType : uint8
 {
 	Content = 0,  // StaticMesh, DataTable, Texture, Blueprint, FoliageType, maybe has null holder to be placeholders
 	Curves,  // Only has one holder
@@ -24,7 +24,7 @@ enum class EHoudiniInputType
 
 
 UENUM()
-enum class EHoudiniActorFilterMethod
+enum class EHoudiniActorFilterMethod : uint8
 {
 	Selection = 0,
 	Class,
@@ -34,7 +34,7 @@ enum class EHoudiniActorFilterMethod
 };
 
 UENUM()
-enum class EHoudiniMaskType
+enum class EHoudiniMaskType : uint8
 {
 	Bit = 0,
 	Weight,
@@ -42,7 +42,7 @@ enum class EHoudiniMaskType
 };
 
 UENUM()
-enum class EHoudiniStaticMeshLODImportMethod
+enum class EHoudiniStaticMeshLODImportMethod : uint8
 {
 	FirstLOD = 0,
 	LastLOD,
@@ -50,7 +50,7 @@ enum class EHoudiniStaticMeshLODImportMethod
 };
 
 UENUM()
-enum class EHoudiniMeshCollisionImportMethod
+enum class EHoudiniMeshCollisionImportMethod : uint8
 {
 	NoImportCollision = 0,
 	ImportWithMesh,
@@ -147,7 +147,7 @@ class HOUDINIENGINE_API UHoudiniInput : public UObject
 	GENERATED_BODY()
 
 protected:
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, Category = "HoudiniInput")
 	EHoudiniInputType Type = EHoudiniInputType::Content;
 
 	UPROPERTY()
@@ -178,7 +178,7 @@ protected:
 	static EHoudiniInputType ParseTypeFromString(const FString& InputName, bool& bOutTypeSpecified);
 
 public:
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	TArray<TObjectPtr<UHoudiniInputHolder>> Holders;  // May be contains nullptr when input type is EHoudiniInputType::Content
 
 	UPROPERTY()
@@ -225,6 +225,9 @@ public:
 
 	bool HapiDestroy();  // Will NOT set parm value to empty
 
+
+	UFUNCTION(BlueprintCallable, Category = "HoudiniInput", meta = (ToolTip = "Could import Asset, Actor, Landscape or HoudiniNode for corresponding input type.\nIf this object has been imported, then will reimport it"))
+	void Import(UObject* Object);
 
 	// -------- Type specified methods --------
 	void OnAssetChanged(const UObject* Object) const;  // Will mark input holder changed, but will NOT request cook
@@ -308,8 +311,10 @@ public:
 
 	FORCEINLINE void MarkChanged(const bool& bChanged) { bHasChanged = bChanged; }
 
+	UFUNCTION(BlueprintCallable, Category = "HoudiniInputHolder")
 	virtual TSoftObjectPtr<UObject> GetAsset() const { return nullptr; }
 
+	UFUNCTION(BlueprintCallable, Category = "HoudiniInputHolder")
 	virtual void RequestReimport();  // Will mark this holder changed, and notify parent AHoudiniNode to cook
 
 	virtual bool HapiUpload() { return true; }

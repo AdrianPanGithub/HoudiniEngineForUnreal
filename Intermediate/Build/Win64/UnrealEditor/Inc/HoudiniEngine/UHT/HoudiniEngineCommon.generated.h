@@ -124,7 +124,7 @@ template<> HOUDINIENGINE_API UEnum* StaticEnum<EHoudiniEditOptions>();
 	op(EHoudiniCurveType::Bezier) \
 	op(EHoudiniCurveType::Interpolate) 
 
-enum class EHoudiniCurveType;
+enum class EHoudiniCurveType : int8;
 template<> struct TIsUEnumClass<EHoudiniCurveType> { enum { Value = true }; };
 template<> HOUDINIENGINE_API UEnum* StaticEnum<EHoudiniCurveType>();
 

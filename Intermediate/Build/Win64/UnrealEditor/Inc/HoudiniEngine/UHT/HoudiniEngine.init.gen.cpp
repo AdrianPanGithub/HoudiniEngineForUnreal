@@ -7,23 +7,27 @@
 #include "UObject/GeneratedCppIncludes.h"
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
 void EmptyLinkFunctionForGeneratedCodeHoudiniEngine_init() {}
+	HOUDINIENGINE_API UFunction* Z_Construct_UDelegateFunction_AHoudiniNode_HoudiniNodeEvents__DelegateSignature();
 	static FPackageRegistrationInfo Z_Registration_Info_UPackage__Script_HoudiniEngine;
 	FORCENOINLINE UPackage* Z_Construct_UPackage__Script_HoudiniEngine()
 	{
 		if (!Z_Registration_Info_UPackage__Script_HoudiniEngine.OuterSingleton)
 		{
+			static UObject* (*const SingletonFuncArray[])() = {
+				(UObject* (*)())Z_Construct_UDelegateFunction_AHoudiniNode_HoudiniNodeEvents__DelegateSignature,
+			};
 			static const UECodeGen_Private::FPackageParams PackageParams = {
 				"/Script/HoudiniEngine",
-				nullptr,
-				0,
-				PKG_CompiledIn | 0x00000000,
-				0xB0AA1A40,
-				0xBCC69D11,
+				SingletonFuncArray,
+				UE_ARRAY_COUNT(SingletonFuncArray),
+				PKG_CompiledIn | 0x00000040,
+				0x8B105F94,
+				0x38FB3515,
 				METADATA_PARAMS(0, nullptr)
 			};
 			UECodeGen_Private::ConstructUPackage(Z_Registration_Info_UPackage__Script_HoudiniEngine.OuterSingleton, PackageParams);
 		}
 		return Z_Registration_Info_UPackage__Script_HoudiniEngine.OuterSingleton;
 	}
-	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_HoudiniEngine(Z_Construct_UPackage__Script_HoudiniEngine, TEXT("/Script/HoudiniEngine"), Z_Registration_Info_UPackage__Script_HoudiniEngine, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0xB0AA1A40, 0xBCC69D11));
+	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_HoudiniEngine(Z_Construct_UPackage__Script_HoudiniEngine, TEXT("/Script/HoudiniEngine"), Z_Registration_Info_UPackage__Script_HoudiniEngine, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0x8B105F94, 0x38FB3515));
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

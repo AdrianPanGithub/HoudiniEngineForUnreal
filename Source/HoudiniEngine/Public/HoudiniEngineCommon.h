@@ -23,19 +23,19 @@ struct HOUDINIENGINE_API FHoudiniGenericParameter : public FTableRowBase
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "HoudiniGenericParameter")
 	EHoudiniGenericParameterType Type = EHoudiniGenericParameterType::Int;
 
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "HoudiniGenericParameter")
 	int32 Size = 0;
 
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, meta = (EditCondition = "Type == EHoudiniGenericParameterType::Int || Type == EHoudiniGenericParameterType::Float", EditConditionHides))
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "HoudiniGenericParameter", meta = (EditCondition = "Type == EHoudiniGenericParameterType::Int || Type == EHoudiniGenericParameterType::Float", EditConditionHides))
 	FVector4f NumericValues = FVector4f::Zero();
 
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, meta = (EditCondition = "Type == EHoudiniGenericParameterType::String || Type == EHoudiniGenericParameterType::Object || Type == EHoudiniGenericParameterType::MultiParm", EditConditionHides))
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "HoudiniGenericParameter", meta = (EditCondition = "Type == EHoudiniGenericParameterType::String || Type == EHoudiniGenericParameterType::Object || Type == EHoudiniGenericParameterType::MultiParm", EditConditionHides))
 	FString StringValue;  // If is input parm, then StringValue will be set to object infos, like bounds of StaticMesh, or landscape transforms
 
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, meta = (EditCondition = "Type == EHoudiniGenericParameterType::Object", EditConditionHides))
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "HoudiniGenericParameter", meta = (EditCondition = "Type == EHoudiniGenericParameterType::Object", EditConditionHides))
 	TSoftObjectPtr<UObject> ObjectValue;
 };
 
@@ -78,7 +78,7 @@ public:
 };
 
 UENUM()
-enum class EHoudiniCurveType
+enum class EHoudiniCurveType : int8
 {
 	Points = -1,
 	Polygon,
@@ -292,18 +292,18 @@ TEXT("");
 // -------- Instancer --------
 #define HAPI_ATTRIB_UNREAL_INSTANCE				            "unreal_instance"
 #define HAPI_ATTRIB_UNREAL_OUTPUT_INSTANCE_TYPE             "unreal_output_instance_type"  // Could be either int or string
-#define HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_AUTO               0   // Decided by asset to instantiate
+#define HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_AUTO               0  // Decided by asset to instantiate
 #define HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_ISMC               1
 #define HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_HISMC              2
 #define HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_COMPONENTS         3
 #define HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_ACTORS             4
 #define HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_FOLIAGE            5
-#define HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_CHAOS              6  // Geometry Collection
+#define HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_CHAOS              6  // GeometryCollection
 #define HAPI_ATTRIB_UNREAL_INSTANCE_NUM_CUSTOM_FLOATS		"unreal_num_custom_floats"
 #define HAPI_ATTRIB_UNREAL_INSTANCE_CUSTOM_DATA_PREFIX		"unreal_per_instance_custom_data"
-#define HAPI_UNREAL_ATTRIB_FORCE_INSTANCER					"unreal_force_instancer"  // <Deprecated>, use "unreal_instance_output_mode" instead
-#define HAPI_UNREAL_ATTRIB_HIERARCHICAL_INSTANCED_SM		"unreal_hierarchical_instancer"  // <Deprecated>, use i@unreal_instance_output_mode = 2 or s@unreal_instance_output_mode = \"hierarchical\" instead
-#define HAPI_UNREAL_ATTRIB_FOLIAGE_INSTANCER				"unreal_foliage"  // <Deprecated>, use i@unreal_instance_output_mode = 2 or s@unreal_instance_output_mode = \"hierarchical\" instead
+#define HAPI_UNREAL_ATTRIB_FORCE_INSTANCER					"unreal_force_instancer"  // <Deprecated>, use s@unreal_instance_output_type = "ism" or i@unreal_instance_output_type = 1 instead
+#define HAPI_UNREAL_ATTRIB_HIERARCHICAL_INSTANCED_SM		"unreal_hierarchical_instancer"  // <Deprecated>, use s@unreal_instance_output_type = "hierarchical" or i@unreal_instance_output_type = 2 instead
+#define HAPI_UNREAL_ATTRIB_FOLIAGE_INSTANCER				"unreal_foliage"  // <Deprecated>, use s@unreal_instance_output_type = "foliage" or i@unreal_instance_output_type = 5 instead
 
 // -------- DataTable --------
 #define HAPI_ATTRIB_PREFIX_UNREAL_DATA_TABLE				"unreal_data_table_"
@@ -313,7 +313,7 @@ TEXT("");
 // -------- Landscape --------
 #define HAPI_ATTRIB_UNREAL_OUTPUT_NAME			            "unreal_output_name"
 
-#define HAPI_UNREAL_ATTRIB_LANDSCAPE_LAYER_NOWEIGHTBLEND	"unreal_landscape_layer_noweightblend"  // <Deprecated>, use "unreal_instance_output_mode" instead
+#define HAPI_UNREAL_ATTRIB_LANDSCAPE_LAYER_NOWEIGHTBLEND	"unreal_landscape_layer_noweightblend"  // <Deprecated>, use i@unreal_uproperty_NoWeightBlend instead
 
 #define HAPI_ATTRIB_UNREAL_LANDSCAPE_HOLE_MATERIAL		    "unreal_landscape_hole_material"
 #define HAPI_ATTRIB_UNREAL_LANDSCAPE_HOLE_MATERIAL_INSTANCE	"unreal_landscape_hole_material_instance"
@@ -354,6 +354,8 @@ TEXT("");
 #define HAPI_PARM_TAG_COOK_ON_SELECT                        "cook_on_select"
 #define HAPI_PARM_TAG_IDENTIFIER_NAME                       "identifier_name"
 
+#define HAPI_PARM_TAG_CHECK_CHANGED                         "check_changed"
+
 #define HAPI_PARM_TAG_UNREAL_REF				        	"unreal_ref"
 #define HAPI_PARM_TAG_UNREAL_REF_CLASS                      "unreal_ref_class"
 #define HAPI_PARM_TAG_UNREAL_REF_FILTER                     "unreal_ref_filter"
@@ -366,7 +368,7 @@ TEXT("");
 #define HAPI_PARM_TAG_BYTE_MASK_VALUE_PARM_NAME	          	"byte_mask_value_parm_name"
 
 #define HAPI_PARM_TAG_IMPORT_LANDSCAPE_SPLINES              "import_landscape_splines"
-#define HAPI_PARM_TAG_LANDSCAPE_LAYER                       "landscape_layer"
+#define HAPI_PARM_TAG_LANDSCAPE_LAYER                       "landscape_layer"  // Will combine all EditLayers to import, or use for specify layers on non-edit landscapes
 #define HAPI_PARM_TAG_PREFIX_UNREAL_LANDSCAPE_EDITLAYER     "unreal_landscape_editlayer_"
 
 // ------- Enviroment Variable --------
