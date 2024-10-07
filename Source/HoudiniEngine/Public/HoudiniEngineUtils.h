@@ -25,6 +25,7 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 	static bool HapiConvertStringHandles(const TArray<HAPI_StringHandle>& InSHs, TArray<std::string>& OutStrings);
 
 
+	// -------- Session Status --------
 	static bool HapiGetStatusString(const HAPI_StatusType& StatusType, const HAPI_StatusVerbosity& StatusVerbosity, FString& OutStatusString);
 
 	static void PrintFailedResult(const TCHAR* SourceLocationStr, const HAPI_Result& Result);
@@ -79,7 +80,7 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 	// -------- Shared Memory --------
 	static const float* GetSharedMemory(const TCHAR* SHMPath, const size_t& Size32, size_t& OutHandle);
 
-	static float* FindOrCreateSharedMemory(const TCHAR* Path, const size_t& Size32, size_t& InOutHandle, bool& bOutFound);
+	static float* FindOrCreateSharedMemory(const TCHAR* SHMPath, const size_t& Size32, size_t& InOutHandle, bool& bOutFound);
 
 	static void UnmapSharedMemory(const void* SHM);
 
@@ -98,6 +99,8 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 	static void DestroyComponent(USceneComponent* Component);
 
 	static void NotifyAssetChanged(const UObject* Asset);
+
+	static bool FilterClass(const UObject* Asset, const TArray<const UClass*>& AllowClasses, const TArray<const UClass*>& DisallowClasses);
 
 
 	// -------- Misc ---------

@@ -8,6 +8,7 @@
 #include "HAPI/HAPI_Common.h"
 
 
+enum class EHoudiniNodeEvent : uint8;
 class AHoudiniNode;
 class UHoudiniAsset;
 class IHoudiniContentInputBuilder;
@@ -105,6 +106,9 @@ protected:
 public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHoudiniNodeRegisteredEvent, AHoudiniNode*)
 	FOnHoudiniNodeRegisteredEvent OnHoudiniNodeRegisteredEvent;
+	
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FHoudiniNodeEvents, AHoudiniNode*, const EHoudiniNodeEvent)
+	FHoudiniNodeEvents HoudiniNodeEvents;
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FHoudiniAsyncTaskMessageEvent, const FText&)  // (Message), Empty means start fade out
 	FHoudiniAsyncTaskMessageEvent HoudiniAsyncTaskMessageEvent;  // Should Only broadcast in GameThread
@@ -124,7 +128,7 @@ public:
 
 	FORCEINLINE const TArray<TSharedPtr<IHoudiniContentInputBuilder>>& GetContentInputBuilders() const { return ContentInputBuilders; }
 
-	// The register order of houdini engine itself: ActorComponent < MeshComponent < SplineComponent < BrushComponent
+	// The register order of houdini engine itself: ActorComponent < MeshComponent < SplineComponent < BrushComponent(BSP) < DynamicMeshComponent
 	FORCEINLINE void RegisterInputBuilder(const TSharedPtr<IHoudiniComponentInputBuilder>& Builder) { ComponentInputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterInputBuilder(const TSharedPtr<IHoudiniComponentInputBuilder>& Builder) { ComponentInputBuilders.Remove(Builder); }

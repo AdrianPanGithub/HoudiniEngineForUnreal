@@ -382,6 +382,8 @@ TEXT("");
 #define HAPI_MESSAGE_RESTART_SESSION                        "Restart HARS...\n(Houdini Engine API Remote Server)"
 
 
+static const FName HoudiniNodeDefaultFolderPath(HOUDINI_NODE_OUTLINER_FOLDER);
+
 static const FName HoudiniHeightLayerName("height");
 static const FName HoudiniAlphaLayerName("Alpha");
 static const FName HoudiniMaskLayerName("mask");

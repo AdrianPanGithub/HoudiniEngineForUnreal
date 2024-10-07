@@ -137,6 +137,10 @@ struct HOUDINIENGINE_API FHoudiniInputSettings  // All of the settings could set
 	bool FilterString(const FString& TargetStr) const;  // Return true if filter in, false if filter out
 
 	bool HapiParseFromParameterTags(UHoudiniInput* Input, const int32& NodeId, const int32 ParmId);
+
+	void GetFilterClasses(TArray<const UClass*>& OutAllowClasses, TArray<const UClass*>& OutDisallowClasses, const bool& bIsActorClass) const;
+
+	bool FilterActorTags(const AActor* Actor) const;
 };
 
 
@@ -216,6 +220,8 @@ public:
 	bool HapiDisconnectFromMergeNode(const int32& NodeId);  // For Content and World input, will query node id one by one, will call NotifyMergedNodeDestroyed() if successs
 
 	FORCEINLINE void NotifyMergedNodeDestroyed() { if (MergedNodeCount >= 1) --MergedNodeCount; }
+
+	bool HapiCleanupHolders();
 
 	void RequestClear();  // Clear input out of cook process of is unsafe, since this will reset parameter value, so we just mark this input pending clear
 
@@ -312,7 +318,9 @@ public:
 	FORCEINLINE void MarkChanged(const bool& bChanged) { bHasChanged = bChanged; }
 
 	UFUNCTION(BlueprintCallable, Category = "HoudiniInputHolder")
-	virtual TSoftObjectPtr<UObject> GetAsset() const { return nullptr; }
+	virtual TSoftObjectPtr<UObject> GetObject() const { return nullptr; }
+
+	virtual bool IsObjectExists() const { return true; }
 
 	UFUNCTION(BlueprintCallable, Category = "HoudiniInputHolder")
 	virtual void RequestReimport();  // Will mark this holder changed, and notify parent AHoudiniNode to cook
@@ -375,7 +383,7 @@ public:
 };
 
 // Inherit from builder and register using FHoudiniEngine::RegisterInputBuilder
-// The register order of houdini engine itself: ActorComponent < MeshComponent < SplineComponent < BrushComponent
+// The register order of houdini engine itself: ActorComponent < MeshComponent < SplineComponent < BrushComponent(BSP) < DynamicMeshComponent
 class HOUDINIENGINE_API IHoudiniComponentInputBuilder
 {
 public:

@@ -32,6 +32,7 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 01. Provides a set of C++ API, allow writing custom I/O translator for your own unreal classes or assets
 
     See `Source/HoudiniEngine/Public/HoudiniInput.h` and `Source/HoudiniEngine/Public/HoudiniOutput.h`
+    Also see [HoudiniMassTranslator](https://github.com/AdrianPanGithub/HoudiniMassTranslator) of how to use these API.
 02. Streamlined Blueprint API.
 03. Light weight, compact usage and panel widgets.
 
@@ -52,12 +53,13 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 04. Landscape layers input support update while brushing.
 05. Unreal spline input support import custom properties on your Blueprint.
 06. Texture input support.
-07. All component type input support.
-08. All settings in the parameter input panel could set by parameter tags
-09. Mesh inputs are packed before transform.
-10. All Input types support shared memory data transport, 8x faster than official shared memory session.
+07. DynamicMeshComponent input support.
+08. All component type input support.
+09. All settings in the parameter input panel could set by parameter tags
+10. Mesh inputs are packed before transform.
+11. All Input types support shared memory data transport, 8x faster than official shared memory session.
 
-11. ... (And Much More)
+12. ... (And Much More)
 
 **Output**:
 01. unreal_uproperty_* support dict and array attributes, almost everything could be set.
