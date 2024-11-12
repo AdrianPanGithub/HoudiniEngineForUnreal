@@ -8,10 +8,12 @@
 #include "HAPI/HAPI_Common.h"
 
 
+#define IS_ASSET_PATH_INVALID(ASSET_PATH) (!ASSET_PATH.Contains(TEXT("'/")) && !ASSET_PATH.StartsWith(TEXT("/")))
+#define PRINT_HOUDINI_FLOAT(VALUE) *FString::SanitizeFloat(FMath::RoundToInt64((VALUE) * 100.0) * 0.0001, 0)
+
+
 enum class EHoudiniVolumeConvertDataType : int;
 enum class EHoudiniStorageType : int32;
-
-#define IS_ASSET_PATH_INVALID(ASSET_PATH) (!ASSET_PATH.Contains(TEXT("'/")) && !ASSET_PATH.StartsWith(TEXT("/")))
 
 struct HOUDINIENGINE_API FHoudiniEngineUtils
 {

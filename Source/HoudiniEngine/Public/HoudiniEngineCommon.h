@@ -348,6 +348,11 @@ TEXT("");
 #define HAPI_ATTRIB_UNREAL_LANDSCAPE_SPLINE_TANGENT_LENGTH  "unreal_landscape_spline_tangent_length"
 #define HAPI_ATTRIB_UNREAL_BRUSH_TYPE                       "unreal_brush_type"  // See EBrushType
 
+// -------- Parm --------
+#define HAPI_PARM_SUFFIX_POINT_ATTRIB_FOLDER                 "_point_attribs"  // Prefix is curve input name or group name
+#define HAPI_PARM_SUFFIX_PRIM_ATTRIB_FOLDER                  "_prim_attribs"  // Prefix is curve input name or group name
+#define HAPI_PARM_SUFFIX_BYTE_MASK_VALUE                     "_byte_value"  // Prefix is mask input name, must be int
+
 // -------- ParmTags --------
 #define HAPI_PARM_TAG_AS_TOGGLE                             "as_toggle"
 #define HAPI_PARM_TAG_EDITABLE                              "editable"
@@ -365,7 +370,6 @@ TEXT("");
 #define HAPI_PARM_TAG_UNREAL_ACTOR_FILTER_METHOD            "unreal_actor_filter_method"
 #define HAPI_PARM_TAG_PAINT_UPDATE_METHOD                   "paint_update_method"  // For landscape and mask input
 #define HAPI_PARM_TAG_MASK_TYPE                             "mask_type"
-#define HAPI_PARM_TAG_BYTE_MASK_VALUE_PARM_NAME	          	"byte_mask_value_parm_name"
 
 #define HAPI_PARM_TAG_IMPORT_LANDSCAPE_SPLINES              "import_landscape_splines"
 #define HAPI_PARM_TAG_LANDSCAPE_LAYER                       "landscape_layer"  // Will combine all EditLayers to import, or use for specify layers on non-edit landscapes
@@ -385,6 +389,6 @@ TEXT("");
 static const FName HoudiniNodeDefaultFolderPath(HOUDINI_NODE_OUTLINER_FOLDER);
 
 static const FName HoudiniHeightLayerName("height");
-static const FName HoudiniAlphaLayerName("Alpha");
+static const FName HoudiniAlphaLayerName("Alpha");  // Represent Visibility layer on landscape
 static const FName HoudiniMaskLayerName("mask");
-static const FName HoudiniPartialOutputMaskName("partial_output_mask");
+static const FName HoudiniPartialOutputMaskName("partial_output_mask");  // Only update the pixel data where f@partial_output_mask > 0.0

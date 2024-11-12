@@ -135,7 +135,7 @@ public:
 
 	FORCEINLINE const TArray<TSharedPtr<IHoudiniComponentInputBuilder>>& GetComponentInputBuilders() const { return ComponentInputBuilders; }
 
-	// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < Texture < DataTable
+	// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < Texture(Image and VDB) < DataTable
 	FORCEINLINE void RegisterOutputBuilder(const TSharedPtr<IHoudiniOutputBuilder>& Builder) { OutputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterOutputBuilder(const TSharedPtr<IHoudiniOutputBuilder>& Builder) { OutputBuilders.Remove(Builder); }

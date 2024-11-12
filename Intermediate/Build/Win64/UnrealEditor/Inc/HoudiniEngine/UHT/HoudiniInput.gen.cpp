@@ -424,10 +424,6 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 		static const UECodeGen_Private::FMetaDataPairParam NewProp_MaskType_MetaData[];
 #endif
 		static const UECodeGen_Private::FEnumPropertyParams NewProp_MaskType;
-#if WITH_METADATA
-		static const UECodeGen_Private::FMetaDataPairParam NewProp_ByteMaskValueParmName_MetaData[];
-#endif
-		static const UECodeGen_Private::FStrPropertyParams NewProp_ByteMaskValueParmName;
 		static const UECodeGen_Private::FPropertyParamsBase* const PropPointers[];
 		static const UECodeGen_Private::FStructParams ReturnStructParams;
 	};
@@ -671,12 +667,6 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 	};
 #endif
 	const UECodeGen_Private::FEnumPropertyParams Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_MaskType = { "MaskType", nullptr, (EPropertyFlags)0x0010000000000000, UECodeGen_Private::EPropertyGenFlags::Enum, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(FHoudiniInputSettings, MaskType), Z_Construct_UEnum_HoudiniEngine_EHoudiniMaskType, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_MaskType_MetaData), Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_MaskType_MetaData) }; // 4190280730
-#if WITH_METADATA
-	const UECodeGen_Private::FMetaDataPairParam Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_ByteMaskValueParmName_MetaData[] = {
-		{ "ModuleRelativePath", "Public/HoudiniInput.h" },
-	};
-#endif
-	const UECodeGen_Private::FStrPropertyParams Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_ByteMaskValueParmName = { "ByteMaskValueParmName", nullptr, (EPropertyFlags)0x0010000000000000, UECodeGen_Private::EPropertyGenFlags::Str, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(FHoudiniInputSettings, ByteMaskValueParmName), METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_ByteMaskValueParmName_MetaData), Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_ByteMaskValueParmName_MetaData) };
 	const UECodeGen_Private::FPropertyParamsBase* const Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::PropPointers[] = {
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_bImportAsReference,
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_bCheckChanged,
@@ -708,7 +698,6 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_LandscapeLayerFilterMap,
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_MaskType_Underlying,
 		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_MaskType,
-		(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewProp_ByteMaskValueParmName,
 	};
 	const UECodeGen_Private::FStructParams Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::ReturnStructParams = {
 		(UObject* (*)())Z_Construct_UPackage__Script_HoudiniEngine,
@@ -875,7 +864,7 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 		{ "ModuleRelativePath", "Public/HoudiniInput.h" },
 	};
 #endif
-	const UECodeGen_Private::FStructPropertyParams Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings = { "Settings", nullptr, (EPropertyFlags)0x0020080000000000, UECodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(UHoudiniInput, Settings), Z_Construct_UScriptStruct_FHoudiniInputSettings, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings_MetaData), Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings_MetaData) }; // 2505474394
+	const UECodeGen_Private::FStructPropertyParams Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings = { "Settings", nullptr, (EPropertyFlags)0x0020080000000000, UECodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(UHoudiniInput, Settings), Z_Construct_UScriptStruct_FHoudiniInputSettings, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings_MetaData), Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Settings_MetaData) }; // 3561868966
 	const UECodeGen_Private::FObjectPtrPropertyParams Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Holders_Inner = { "Holders", nullptr, (EPropertyFlags)0x0004000000000000, UECodeGen_Private::EPropertyGenFlags::Object | UECodeGen_Private::EPropertyGenFlags::ObjectPtr, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, 0, Z_Construct_UClass_UHoudiniInputHolder_NoRegister, METADATA_PARAMS(0, nullptr) };
 #if WITH_METADATA
 	const UECodeGen_Private::FMetaDataPairParam Z_Construct_UClass_UHoudiniInput_Statics::NewProp_Holders_MetaData[] = {
@@ -1109,13 +1098,13 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<FHoudiniInputSettings>(
 		{ EHoudiniMeshCollisionImportMethod_StaticEnum, TEXT("EHoudiniMeshCollisionImportMethod"), &Z_Registration_Info_UEnum_EHoudiniMeshCollisionImportMethod, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 1472608697U) },
 	};
 	const FStructRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ScriptStructInfo[] = {
-		{ FHoudiniInputSettings::StaticStruct, Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewStructOps, TEXT("HoudiniInputSettings"), &Z_Registration_Info_UScriptStruct_HoudiniInputSettings, CONSTRUCT_RELOAD_VERSION_INFO(FStructReloadVersionInfo, sizeof(FHoudiniInputSettings), 2505474394U) },
+		{ FHoudiniInputSettings::StaticStruct, Z_Construct_UScriptStruct_FHoudiniInputSettings_Statics::NewStructOps, TEXT("HoudiniInputSettings"), &Z_Registration_Info_UScriptStruct_HoudiniInputSettings, CONSTRUCT_RELOAD_VERSION_INFO(FStructReloadVersionInfo, sizeof(FHoudiniInputSettings), 3561868966U) },
 	};
 	const FClassRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ClassInfo[] = {
-		{ Z_Construct_UClass_UHoudiniInput, UHoudiniInput::StaticClass, TEXT("UHoudiniInput"), &Z_Registration_Info_UClass_UHoudiniInput, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UHoudiniInput), 875109048U) },
+		{ Z_Construct_UClass_UHoudiniInput, UHoudiniInput::StaticClass, TEXT("UHoudiniInput"), &Z_Registration_Info_UClass_UHoudiniInput, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UHoudiniInput), 650862678U) },
 		{ Z_Construct_UClass_UHoudiniInputHolder, UHoudiniInputHolder::StaticClass, TEXT("UHoudiniInputHolder"), &Z_Registration_Info_UClass_UHoudiniInputHolder, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UHoudiniInputHolder), 2052388398U) },
 	};
-	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_3143580736(TEXT("/Script/HoudiniEngine"),
+	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_647017703(TEXT("/Script/HoudiniEngine"),
 		Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ClassInfo),
 		Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ScriptStructInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::ScriptStructInfo),
 		Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::EnumInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_UE5_3Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniInput_h_Statics::EnumInfo));

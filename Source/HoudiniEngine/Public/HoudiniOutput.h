@@ -47,7 +47,7 @@ public:
 };
 
 // Inherit from builder and register using FHoudiniEngine::RegisterOutputBuilder
-// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < Texture < DataTable
+// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < Texture(Image and VDB) < DataTable
 class HOUDINIENGINE_API IHoudiniOutputBuilder
 {
 public:
@@ -97,6 +97,31 @@ protected:
 		const FString& InSplitValue, const bool& bInSplitActor, const bool& bIsEditableGeometry);
 
 	void DestroyComponent(const AHoudiniNode* Node, const TWeakObjectPtr<USceneComponent>& Component, const bool& bIsEditableGeometry) const;
+
+
+	// mutable TWeakObjectPtr<TComponentClass> Component;
+
+	template<bool bIsEditGeo, typename TComponentClass>
+	FORCEINLINE TComponentClass* Find_Internal(TWeakObjectPtr<TComponentClass>& InOutComponent, const AHoudiniNode* Node) const
+	{
+		if (InOutComponent.IsValid())
+			return InOutComponent.Get();
+
+		AActor* FoundSplitActor = nullptr;
+		TComponentClass* FoundComp = Cast<TComponentClass>(FindComponent(Node, FoundSplitActor, bIsEditGeo));
+		InOutComponent = FoundComp;
+		return FoundComp;
+	}
+
+	template<bool bIsEditGeo, typename TComponentClass>
+	FORCEINLINE TComponentClass* CreateOrUpdate_Internal(TWeakObjectPtr<TComponentClass>& InOutComponent,
+		AHoudiniNode* Node, const FString& InSplitValue, const bool& bInSplitActor)
+	{
+		USceneComponent* Comp = InOutComponent.IsValid() ? InOutComponent.Get() : nullptr;
+		CreateOrUpdateComponent(Node, Comp, TComponentClass::StaticClass(), InSplitValue, bInSplitActor, bIsEditGeo);
+		InOutComponent = (TComponentClass*)Comp;
+		return (TComponentClass*)Comp;
+	}
 
 public:
 	FORCEINLINE bool IsSplitActor() const { return bSplitActor && (ComponentName != NAME_None); }

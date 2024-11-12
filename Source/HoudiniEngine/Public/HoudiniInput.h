@@ -129,8 +129,6 @@ struct HOUDINIENGINE_API FHoudiniInputSettings  // All of the settings could set
 	UPROPERTY()
 	EHoudiniMaskType MaskType = EHoudiniMaskType::Bit;
 
-	UPROPERTY()
-	FString ByteMaskValueParmName;
 
 	FORCEINLINE bool HasAssetFilters() const { return !Filters.IsEmpty() || !InvertedFilters.IsEmpty(); }
 
@@ -225,7 +223,7 @@ public:
 
 	void RequestClear();  // Clear input out of cook process of is unsafe, since this will reset parameter value, so we just mark this input pending clear
 
-	bool HapiRemoveHolder(const int32& HolderIdx);  // Just remove holder out of cook process is safe
+	bool HapiRemoveHolder(const int32& HolderIdx, const bool& bShrink = true);  // Just remove holder out of cook process is safe
 
 	void Invalidate();  // Should be called without HapiDestroy()
 
@@ -280,7 +278,9 @@ public:
 
 	void SetMaskType(const EHoudiniMaskType& MaskType);
 
-	void SetByteMaskValueParmName(const FString& ValueParmName);
+#if WITH_EDITOR
+	virtual void PostEditUndo() override;
+#endif
 };
 
 #define FOREACH_HOUDINI_INPUT(ACTION) for (const TWeakObjectPtr<AHoudiniNode>& Node : FHoudiniEngine::Get().GetCurrentNodes())\
