@@ -81,6 +81,8 @@ struct HOUDINIENGINE_API FHoudiniOutputUtils
 		return nullptr;
 	}
 
+	static FString GetCookFolderPath(const AHoudiniNode* Node);
+
 	// -------- Shared Memory --------
 	static void CloseData(const float* Data, const size_t& SHMHandle);  // If SHMHandle is 0, means Data was from malloc
 

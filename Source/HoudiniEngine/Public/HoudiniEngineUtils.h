@@ -94,7 +94,23 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 
 	static FString GetPackagePath(const FString& AssetPath);  // like "/Game/HoudiniEngine/SM_Test"
 
+protected:
 	static UObject* FindOrCreateAsset(const UClass* AssetClass, const FString& AssetPath, bool* bOutFound = nullptr);
+
+	static UObject* CreateAsset(const UClass* AssetClass, const FString& AssetPath);
+
+public:
+	template<typename TAssetClass>
+	FORCEINLINE static TAssetClass* FindOrCreateAsset(const FString& AssetPath, bool* bOutFound = nullptr)  // Will try to reuse exist asset if found
+	{
+		return Cast<TAssetClass>(FindOrCreateAsset(TAssetClass::StaticClass(), AssetPath, bOutFound));
+	}
+
+	template<typename TAssetClass>
+	FORCEINLINE static TAssetClass* CreateAsset(const FString& AssetPath)  // Force new an asset, Ignore exist asset
+	{
+		return Cast<TAssetClass>(CreateAsset(TAssetClass::StaticClass(), AssetPath));
+	}
 
 	static USceneComponent* CreateComponent(AActor* Owner, const TSubclassOf<USceneComponent>& ComponentClass);
 

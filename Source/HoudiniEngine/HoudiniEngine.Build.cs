@@ -45,6 +45,7 @@ public class HoudiniEngine : ModuleRules
                 "RHI",
                 "RenderCore",
                 "StaticMeshDescription",
+                "SkeletalMeshDescription",
                 "Json",
                 "DeveloperSettings",
                 "MeshDescription",
