@@ -121,21 +121,21 @@ public:
 	FORCEINLINE void FinishHoudiniMainTaskMessage() const { HoudiniMainTaskMessageEvent.Broadcast(-1.0f, FText::GetEmpty()); }
 
 	// -------- Input/Output Builder --------
-	// The register order of houdini engine itself: StaticMesh < DataTable < Blueprint < FoliageType_InstancedStaticMesh < Texture
+	// The register order of houdini engine itself: SkeletalMesh < Texture2D < FoliageType_InstancedStaticMesh < Blueprint < DataTable < StaticMesh
 	FORCEINLINE void RegisterInputBuilder(const TSharedPtr<IHoudiniContentInputBuilder>& Builder) { ContentInputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterInputBuilder(const TSharedPtr<IHoudiniContentInputBuilder>& Builder) { ContentInputBuilders.Remove(Builder); }
 
 	FORCEINLINE const TArray<TSharedPtr<IHoudiniContentInputBuilder>>& GetContentInputBuilders() const { return ContentInputBuilders; }
 
-	// The register order of houdini engine itself: ActorComponent < MeshComponent < SplineComponent < BrushComponent(BSP) < DynamicMeshComponent
+	// The register order of houdini engine itself: ActorComponent < StaticMeshComponent < SkeletalMeshComponent < SplineComponent < BrushComponent(BSP) < DynamicMeshComponent
 	FORCEINLINE void RegisterInputBuilder(const TSharedPtr<IHoudiniComponentInputBuilder>& Builder) { ComponentInputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterInputBuilder(const TSharedPtr<IHoudiniComponentInputBuilder>& Builder) { ComponentInputBuilders.Remove(Builder); }
 
 	FORCEINLINE const TArray<TSharedPtr<IHoudiniComponentInputBuilder>>& GetComponentInputBuilders() const { return ComponentInputBuilders; }
 
-	// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < Texture(Image and VDB) < DataTable
+	// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < SkeletalMesh(KineFX) < Texture(Image and VDB) < DataTable
 	FORCEINLINE void RegisterOutputBuilder(const TSharedPtr<IHoudiniOutputBuilder>& Builder) { OutputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterOutputBuilder(const TSharedPtr<IHoudiniOutputBuilder>& Builder) { OutputBuilders.Remove(Builder); }
@@ -170,6 +170,8 @@ public:
 	bool HapiStartSessionSync();
 
 	bool HapiStopSession() const;  // Return true if successfully closed, so always call InvalidateSessionData() after this
+
+	bool HapiSaveSceneToFile(const FString& FilePath, bool& bOutSuccess);
 
 	bool HapiOpenSceneInHoudini();
 

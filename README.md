@@ -2,12 +2,15 @@
 
 Welcome to the [repository](https://github.com/AdrianPanGithub/HoudiniEngineForUnreal) for the Houdini Engine For Unreal Plugin. 
 
-This plug-in is the completely remaster of the official Houdini Engine For Unreal from zero, with similar usages but up to 2x - 40x faster data I/O performance compare to the lastest official plug-in, native World-Partition support and much more functionalities optimized for making procedural landscape and city toolset. Moreover, this plug-in provides a set of C++ API to define your own unreal classes and assets I/O translators
+This plug-in is the completely remaster of the official Houdini Engine For Unreal from zero, with similar usages but up to 2x - 15x faster data I/O performance compare to the lastest official plug-in, native World-Partition support and much more functionalities optimized for making procedural landscape and city toolset. Moreover, this plug-in provides a set of C++ API to define your own unreal classes and assets I/O translators
 
-As the usage is similar, [Official Documentation](https://www.sidefx.com/docs/houdini/unreal/) is also available for this plug-in . But there are still a lot of things are different. For the concrete usage of this plug-in, please see **Usage Brief** below, `Resources/houdini/otls/examples` and `Source/HoudiniEngine/Public/HoudiniEngineCommon.h`
+As the usage is similar, [Official Documentation](https://www.sidefx.com/docs/houdini/unreal/) is also available for this plug-in . But there are still a lot of things are different. For the concrete usage of this plug-in, please see **Usage Brief** below, also see `Resources/houdini/otls/examples` and `Source/HoudiniEngine/Public/HoudiniEngineCommon.h`
+
+# Showreels
+See what can be achieved by Only using your HDAs and this custom HoudiniEngineForUnreal plugin:
+[City toolchains](https://youtu.be/5Vp5nAFq1X8?si=IGSDG4cUdsefwn5x) and [Terrain toolchains](https://youtu.be/19gIzQGnSaU?si=-t7LaDjhUEc7hjMe)
 
 # Compatibility
-
 Support all builds of Houdini 20.5, and Unreal Engine >= 5.3.
 NOT compatible with official plug-in, and can NOT work together with official one.
 
@@ -30,7 +33,7 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 01. Provides a set of C++ API, allow writing custom I/O translator for your own unreal classes or assets
 
     See `Source/HoudiniEngine/Public/HoudiniInput.h` and `Source/HoudiniEngine/Public/HoudiniOutput.h`
-    Also see [HoudiniMassTranslator](https://github.com/AdrianPanGithub/HoudiniMassTranslator) of how to use these API.
+    Also see [HoudiniMassTranslator](https://github.com/AdrianPanGithub/HoudiniMassTranslator) and [HoudiniPCGTranslator](https://github.com/AdrianPanGithub/HoudiniPCGTranslator) of how to use these API.
 02. Finite state machine for achieving rich user interactions by only using HDA (See `Resources/houdini/otls/examples/he_example_quick_shape.hda`)
 03. Streamlined Blueprint API.
 04. Light weight, compact usage and panel widgets.
@@ -59,7 +62,7 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 10. All component type input support.
 11. All settings in the operator-path input panel could be set by parameter tags (e.g. { "check_changed", "0" }, { "unreal_ref", "1" }, See `Source/HoudiniEngine/Public/HoudiniEngineCommon.h`)
 12. Mesh inputs are packed before transform.
-13. All Input types support shared memory data transport, 8x faster than official shared memory session.
+13. All Input types support shared memory data transport, up to 15x faster than official shared memory session.
 
 14. ... (And Much More)
 
@@ -73,7 +76,7 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 07. Support Texture output (volumevisualmode = "image", and as an HAPI bug, must add my sharedmemory_volumeoutput Sop to your HDA, See `Resources/houdini/otls/examples/he_example_texture_output.hda`).
 08. "Alpha" heightfield layer now output as Landscape visibility layer, should look identical in houdini and unreal.
 09. Landscape output support shared memory output (6x faster than official shared-memory session, need to add my sharedmemory_volumeoutput Sop to your HDA)
-10. Class Instancer output is 40x faster than official plug-in, also support instantiate USceneComponent derived Classes(e.g. SplineMeshComponent, PointLightComponent etc.).
+10. Support instantiate USceneComponent derived Classes(e.g. SplineMeshComponent, PointLightComponent etc. See `Resources/houdini/otls/examples/he_example_spline_mesh_output.hda`).
 11. Geometry Collection (Chaos) output as instancers (s@unreal_output_instance_type = "GC"), all of the settings on UGeometryCollection could be set by unreal_uproperty_*, also support split and partial output (See `Resources/houdini/otls/examples/he_example_chaos_geometry_collection_output.hda`).
 12. Support Static/AnimatedSparseVolumeTexture (VDBs) output
 13. Support Dynamic Mesh (Geometry Script, s@unreal_output_mesh_type = "dynamic") Output
