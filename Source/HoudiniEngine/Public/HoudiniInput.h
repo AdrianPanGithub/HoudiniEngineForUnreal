@@ -213,7 +213,7 @@ public:
 
 	bool HapiUpload();
 
-	bool HapiConnectToMergeNode(const int32& NodeId);  // For Content and World input, otherwise, set merge node id
+	bool HapiConnectToMergeNode(const int32& NodeId);  // For Content and World input, otherwise, set merge node id, MUST connect at last, after all parms has been set!
 
 	bool HapiDisconnectFromMergeNode(const int32& NodeId);  // For Content and World input, will query node id one by one, will call NotifyMergedNodeDestroyed() if successs
 
@@ -337,7 +337,7 @@ public:
 };
 
 // Inherit from builder and register using FHoudiniEngine::RegisterInputBuilder
-// The register order of houdini engine itself: StaticMesh < DataTable < Blueprint < FoliageType_InstancedStaticMesh < Texture
+// The register order of houdini engine itself: SkeletalMesh < Texture2D < FoliageType_InstancedStaticMesh < Blueprint < DataTable < StaticMesh
 class HOUDINIENGINE_API IHoudiniContentInputBuilder
 {
 public:
@@ -383,7 +383,7 @@ public:
 };
 
 // Inherit from builder and register using FHoudiniEngine::RegisterInputBuilder
-// The register order of houdini engine itself: ActorComponent < MeshComponent < SplineComponent < BrushComponent(BSP) < DynamicMeshComponent
+// The register order of houdini engine itself: ActorComponent < StaticMeshComponent < SkeletalMeshComponent < SplineComponent < BrushComponent(BSP) < DynamicMeshComponent
 class HOUDINIENGINE_API IHoudiniComponentInputBuilder
 {
 public:

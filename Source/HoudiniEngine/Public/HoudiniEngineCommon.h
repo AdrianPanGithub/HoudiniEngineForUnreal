@@ -250,6 +250,7 @@ TEXT("");
 
 // -------- Common --------
 #define HAPI_ATTRIB_ID				                        "id"
+#define HAPI_ATTRIB_TRANSFORM                               "transform"
 #define HAPI_ALPHA						                    "Alpha"
 #define HAPI_ATTRIB_PRIMITIVE_ID                            "__primitive_id"
 #define HAPI_ATTRIB_SHARED_MEMORY_PATH                      "__shared_memory_path__"
@@ -272,12 +273,14 @@ TEXT("");
 // -------- Curve --------
 #define HAPI_CURVE_TYPE                                     "curve_type"  // See EHoudiniCurveType
 #define HAPI_CURVE_CLOSED                                   "curve_closed"
-#define HAPI_PARM_TAG_CURVE_COLOR                           "curve_color"
 #define HAPI_ATTRIB_COLLISION_NAME                          "collision_name"
 #define HAPI_ATTRIB_COLLISION_NORMAL                        "collision_normal"
 
+#define HAPI_ATTRIB_UNREAL_SPLINE_POINT_ARRIVE_TANGENT      "unreal_spline_point_arrive_tangent"
+#define HAPI_ATTRIB_UNREAL_SPLINE_POINT_LEAVE_TANGENT       "unreal_spline_point_leave_tangent"
+
 // -------- Mesh --------
-#define HAPI_ATTRIB_LOD_SCREENSIZE                          "lod_screensize"
+#define HAPI_ATTRIB_UNREAL_SIMPLE_COLLISIONS                "unreal_simple_collisions"  // Must be dict, from/to FKAggregateGeom
 #define HAPI_ATTRIB_UNREAL_OUTPUT_MESH_TYPE		         	"unreal_output_mesh_type"  // Could be either int or string
 #define HAPI_UNREAL_OUTPUT_MESH_TYPE_STATICMESH		        0  // Generate UStaticMesh and UStaticMeshComponent
 #define HAPI_UNREAL_OUTPUT_MESH_TYPE_DYNAMICMESH		    1  // Generate UDynamicMeshComponent
@@ -288,6 +291,12 @@ TEXT("");
 //#define HAPI_UNREAL_ATTRIB_NANITE_PERCENT_TRIANGLES         "unreal_nanite_percent_triangles"
 //#define HAPI_UNREAL_ATTRIB_NANITE_FB_RELATIVE_ERROR         "unreal_nanite_fallback_relative_error"
 //#define HAPI_UNREAL_ATTRIB_NANITE_TRIM_RELATIVE_ERROR       "unreal_nanite_trim_relative_error"
+
+// -------- KineFX --------
+#define HAPI_ATTRIB_BONE_CPATURE_DATA                       "boneCapture_data"
+#define HAPI_ATTRIB_BONE_CPATURE_INDEX                      "boneCapture_index"
+
+#define HAPI_ATTRIB_UNREAL_PHYSICS_ASSET                    "unreal_physics_asset"
 
 // -------- Instancer --------
 #define HAPI_ATTRIB_UNREAL_INSTANCE				            "unreal_instance"
@@ -343,8 +352,7 @@ TEXT("");
 #define HAPI_UNREAL_TEXTURE_STORAGE_FLOAT                   3
 
 // -------- Input --------
-#define HAPI_ATTRIB_UNREAL_SPLINE_POINT_ARRIVE_TANGENT      "unreal_spline_point_arrive_tangent"
-#define HAPI_ATTRIB_UNREAL_SPLINE_POINT_LEAVE_TANGENT       "unreal_spline_point_leave_tangent"
+#define HAPI_ATTRIB_UNREAL_ACTOR_OUTLINER_PATH              "unreal_actor_outliner_path"
 #define HAPI_ATTRIB_UNREAL_LANDSCAPE_SPLINE_TANGENT_LENGTH  "unreal_landscape_spline_tangent_length"
 #define HAPI_ATTRIB_UNREAL_BRUSH_TYPE                       "unreal_brush_type"  // See EBrushType
 
@@ -352,6 +360,7 @@ TEXT("");
 #define HAPI_PARM_SUFFIX_POINT_ATTRIB_FOLDER                 "_point_attribs"  // Prefix is curve input name or group name
 #define HAPI_PARM_SUFFIX_PRIM_ATTRIB_FOLDER                  "_prim_attribs"  // Prefix is curve input name or group name
 #define HAPI_PARM_SUFFIX_BYTE_MASK_VALUE                     "_byte_value"  // Prefix is mask input name, must be int
+#define HAPI_PRESET_VALUE_DELIM                              "\t"
 
 // -------- ParmTags --------
 #define HAPI_PARM_TAG_AS_TOGGLE                             "as_toggle"
@@ -361,12 +370,13 @@ TEXT("");
 
 #define HAPI_PARM_TAG_CHECK_CHANGED                         "check_changed"
 
-#define HAPI_PARM_TAG_UNREAL_REF				        	"unreal_ref"
+#define HAPI_PARM_TAG_UNREAL_REF				        	"unreal_ref"  // set a String parm as asset reference, or set Operator-Path input as references
 #define HAPI_PARM_TAG_UNREAL_REF_CLASS                      "unreal_ref_class"
 #define HAPI_PARM_TAG_UNREAL_REF_FILTER                     "unreal_ref_filter"
 
 #define HAPI_PARM_TAG_NUM_INPUT_OBJECTS			            "num_input_objects"  // For content input, <= 0 means dynamic num objects
 #define HAPI_PARM_TAG_LOD_IMPORT_METHOD                     "lod_import_method"
+#define HAPI_PARM_TAG_CURVE_COLOR                           "curve_color"
 #define HAPI_PARM_TAG_UNREAL_ACTOR_FILTER_METHOD            "unreal_actor_filter_method"
 #define HAPI_PARM_TAG_PAINT_UPDATE_METHOD                   "paint_update_method"  // For landscape and mask input
 #define HAPI_PARM_TAG_MASK_TYPE                             "mask_type"

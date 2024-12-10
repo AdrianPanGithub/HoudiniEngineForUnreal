@@ -28,8 +28,6 @@ protected:
 	bool HapiGetEditableGroups(TArray<FString>& OutEditableGroupNames, TArray<TArray<int32>>& OutEditableGroupships, bool& bOutIsMainGeoEditable,
 		const int32& NodeId, const HAPI_PartInfo& PartInfo, const TArray<std::string>& PrimGroupNames);
 
-	FString GetCookFolderPath() const;
-
 public:
 	FORCEINLINE const FString& GetOutputName() const { return Name; }
 
@@ -47,7 +45,7 @@ public:
 };
 
 // Inherit from builder and register using FHoudiniEngine::RegisterOutputBuilder
-// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < Texture(Image and VDB) < DataTable
+// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < SkeletalMesh(KineFX) < Texture(Image and VDB) < DataTable
 class HOUDINIENGINE_API IHoudiniOutputBuilder
 {
 public:
@@ -55,7 +53,7 @@ public:
 
 	virtual TSubclassOf<UHoudiniOutput> GetClass() const { return nullptr; }  // Will be called when bOutShouldHoldByOutput == true
 
-	virtual bool HapiRetrieve(AHoudiniNode* Node, const int32& NodeId, const TArray<HAPI_PartInfo>& PartInfos) { return true; }  // Will be called when bOutShouldHoldByOutput == false
+	virtual bool HapiRetrieve(AHoudiniNode* Node, const FString& OutputName, const HAPI_GeoInfo& GeoInfo, const TArray<HAPI_PartInfo>& PartInfos) { return true; }  // Will be called when bOutShouldHoldByOutput == false
 };
 
 
