@@ -1,4 +1,4 @@
-// Copyright (c) <2024> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
+// Copyright (c) <2025> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
 
 #pragma once
 
@@ -95,6 +95,7 @@ enum class EHoudiniStorageType : int32
 	Int = 0,
 	Float = 1,
 	String = 2,
+	Object = 3
 };
 
 UENUM()
@@ -180,7 +181,7 @@ HOUDINIENGINE_API DECLARE_LOG_CATEGORY_EXTERN(LogHoudiniEngine, Log, All)
 
 // Return false only when session loss, otherwise true
 #define HAPI_SESSION_INVALID_RESULT(HAPI_RESULT) HAPI_RESULT == HAPI_RESULT_INVALID_SESSION
-#define HAPI_SESSION_FAIL_RETURN(HAPI_FUNC) { HAPI_Result HapiResult_ = HAPI_FUNC; if (HapiResult_ != HAPI_RESULT_SUCCESS) { FHoudiniEngineUtils::PrintFailedResult(UE_SOURCE_LOCATION, HapiResult_); if (HAPI_SESSION_INVALID_RESULT(HapiResult_)) { return false; } } }
+#define HAPI_SESSION_FAIL_RETURN(HAPI_FUNC) { const HAPI_Result HapiResult_ = HAPI_FUNC; if (HapiResult_ != HAPI_RESULT_SUCCESS) { FHoudiniEngineUtils::PrintFailedResult(UE_SOURCE_LOCATION, HapiResult_); if (HAPI_SESSION_INVALID_RESULT(HapiResult_)) { return false; } } }
 #define HOUDINI_FAIL_RETURN(HOUDINI_FUNC) { if (!HOUDINI_FUNC) return false; }
 
 // If Session lost, then we should invalidate session data
@@ -357,9 +358,9 @@ TEXT("");
 #define HAPI_ATTRIB_UNREAL_BRUSH_TYPE                       "unreal_brush_type"  // See EBrushType
 
 // -------- Parm --------
-#define HAPI_PARM_SUFFIX_POINT_ATTRIB_FOLDER                 "_point_attribs"  // Prefix is curve input name or group name
-#define HAPI_PARM_SUFFIX_PRIM_ATTRIB_FOLDER                  "_prim_attribs"  // Prefix is curve input name or group name
-#define HAPI_PARM_SUFFIX_BYTE_MASK_VALUE                     "_byte_value"  // Prefix is mask input name, must be int
+#define HAPI_PARM_SUFFIX_POINT_ATTRIB_FOLDER                 "_point_attribs"  // Suffix for adding custom point attributes on editgeos, prefix is curve input name or group name
+#define HAPI_PARM_SUFFIX_PRIM_ATTRIB_FOLDER                  "_prim_attribs"  // Suffix for adding custom prim attributes on editgeos, prefix is curve input name or group name
+#define HAPI_PARM_SUFFIX_BYTE_MASK_VALUE                     "_byte_value"  // Suffix for binding byte mask value index, prefix is mask input name, e.g. "biome_regions_byte_value#", must be int parm
 #define HAPI_PRESET_VALUE_DELIM                              "\t"
 
 // -------- ParmTags --------
@@ -377,6 +378,8 @@ TEXT("");
 #define HAPI_PARM_TAG_NUM_INPUT_OBJECTS			            "num_input_objects"  // For content input, <= 0 means dynamic num objects
 #define HAPI_PARM_TAG_LOD_IMPORT_METHOD                     "lod_import_method"
 #define HAPI_PARM_TAG_CURVE_COLOR                           "curve_color"
+#define HAPI_PARM_TAG_IMPORT_ROT_AND_SCALE                  "import_rot_and_scale"
+#define HAPI_PARM_TAG_IMPORT_COLLOSION_INFO                 "import_collision_info"
 #define HAPI_PARM_TAG_UNREAL_ACTOR_FILTER_METHOD            "unreal_actor_filter_method"
 #define HAPI_PARM_TAG_PAINT_UPDATE_METHOD                   "paint_update_method"  // For landscape and mask input
 #define HAPI_PARM_TAG_MASK_TYPE                             "mask_type"
