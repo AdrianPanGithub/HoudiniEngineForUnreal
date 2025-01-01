@@ -1,4 +1,4 @@
-// Copyright (c) <2024> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
+// Copyright (c) <2025> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
 
 #pragma once
 
@@ -180,7 +180,7 @@ protected:
 	static EHoudiniInputType ParseTypeFromString(const FString& InputName, bool& bOutTypeSpecified);
 
 public:
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Category = "HoudiniInput")
 	TArray<TObjectPtr<UHoudiniInputHolder>> Holders;  // May be contains nullptr when input type is EHoudiniInputType::Content
 
 	UPROPERTY()
@@ -380,6 +380,9 @@ public:
 	virtual void Invalidate() const = 0;  // Will then delete this, so we need NOT to reset node ids to -1
 
 	virtual bool HapiDestroy(UHoudiniInput* Input) const = 0;  // Will then delete this, so we need NOT to reset node ids to -1
+
+
+	virtual ~FHoudiniComponentInput() {};  // Useless, just avoid a warning of compilation.
 };
 
 // Inherit from builder and register using FHoudiniEngine::RegisterInputBuilder

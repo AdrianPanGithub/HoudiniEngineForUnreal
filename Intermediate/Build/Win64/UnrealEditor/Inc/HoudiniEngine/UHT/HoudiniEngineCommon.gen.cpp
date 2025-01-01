@@ -393,6 +393,7 @@ struct Z_Construct_UEnum_HoudiniEngine_EHoudiniStorageType_Statics
 		{ "Int.Name", "EHoudiniStorageType::Int" },
 		{ "Invalid.Name", "EHoudiniStorageType::Invalid" },
 		{ "ModuleRelativePath", "Public/HoudiniEngineCommon.h" },
+		{ "Object.Name", "EHoudiniStorageType::Object" },
 		{ "String.Name", "EHoudiniStorageType::String" },
 	};
 #endif // WITH_METADATA
@@ -401,6 +402,7 @@ struct Z_Construct_UEnum_HoudiniEngine_EHoudiniStorageType_Statics
 		{ "EHoudiniStorageType::Int", (int64)EHoudiniStorageType::Int },
 		{ "EHoudiniStorageType::Float", (int64)EHoudiniStorageType::Float },
 		{ "EHoudiniStorageType::String", (int64)EHoudiniStorageType::String },
+		{ "EHoudiniStorageType::Object", (int64)EHoudiniStorageType::Object },
 	};
 	static const UECodeGen_Private::FEnumParams EnumParams;
 };
@@ -557,7 +559,7 @@ struct Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniE
 		{ EHoudiniGenericParameterType_StaticEnum, TEXT("EHoudiniGenericParameterType"), &Z_Registration_Info_UEnum_EHoudiniGenericParameterType, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 2036901813U) },
 		{ EHoudiniEditOptions_StaticEnum, TEXT("EHoudiniEditOptions"), &Z_Registration_Info_UEnum_EHoudiniEditOptions, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 2391968578U) },
 		{ EHoudiniCurveType_StaticEnum, TEXT("EHoudiniCurveType"), &Z_Registration_Info_UEnum_EHoudiniCurveType, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 3009086690U) },
-		{ EHoudiniStorageType_StaticEnum, TEXT("EHoudiniStorageType"), &Z_Registration_Info_UEnum_EHoudiniStorageType, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 2516412674U) },
+		{ EHoudiniStorageType_StaticEnum, TEXT("EHoudiniStorageType"), &Z_Registration_Info_UEnum_EHoudiniStorageType, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 3478782843U) },
 		{ EHoudiniAttributeOwner_StaticEnum, TEXT("EHoudiniAttributeOwner"), &Z_Registration_Info_UEnum_EHoudiniAttributeOwner, CONSTRUCT_RELOAD_VERSION_INFO(FEnumReloadVersionInfo, 2857751349U) },
 	};
 	static constexpr FStructRegisterCompiledInInfo ScriptStructInfo[] = {
@@ -568,7 +570,7 @@ struct Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniE
 		{ Z_Construct_UClass_UHoudiniPresetHandler, UHoudiniPresetHandler::StaticClass, TEXT("UHoudiniPresetHandler"), &Z_Registration_Info_UClass_UHoudiniPresetHandler, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UHoudiniPresetHandler), 3842740422U) },
 	};
 };
-static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_101360685(TEXT("/Script/HoudiniEngine"),
+static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_3491109601(TEXT("/Script/HoudiniEngine"),
 	Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_Statics::ClassInfo),
 	Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_Statics::ScriptStructInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_Statics::ScriptStructInfo),
 	Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_Statics::EnumInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_Statics::EnumInfo));
