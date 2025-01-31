@@ -45,7 +45,7 @@ public:
 };
 
 // Inherit from builder and register using FHoudiniEngine::RegisterOutputBuilder
-// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < SkeletalMesh(KineFX) < Texture(Image and VDB) < DataTable
+// The register order of houdini engine itself: Landscape < Instancer < Asset < Curve < Mesh < SkeletalMesh(KineFX) < MaterialInstance < Texture(Image and VDB) < DataTable
 class HOUDINIENGINE_API IHoudiniOutputBuilder
 {
 public:

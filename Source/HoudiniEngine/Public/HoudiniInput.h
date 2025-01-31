@@ -136,7 +136,7 @@ struct HOUDINIENGINE_API FHoudiniInputSettings  // All of the settings could set
 
 	bool HapiParseFromParameterTags(UHoudiniInput* Input, const int32& NodeId, const int32 ParmId);
 
-	void GetFilterClasses(TArray<const UClass*>& OutAllowClasses, TArray<const UClass*>& OutDisallowClasses, const bool& bIsActorClass) const;
+	void GetFilterClasses(TArray<const UClass*>& OutAllowClasses, TArray<const UClass*>& OutDisallowClasses, const UClass* ParentClass = nullptr) const;
 
 	bool FilterActorTags(const AActor* Actor) const;
 };
@@ -337,7 +337,7 @@ public:
 };
 
 // Inherit from builder and register using FHoudiniEngine::RegisterInputBuilder
-// The register order of houdini engine itself: SkeletalMesh < Texture2D < FoliageType_InstancedStaticMesh < Blueprint < DataTable < StaticMesh
+// The register order of houdini engine itself: SkeletalMesh < DataAsset < Texture2D < FoliageType_InstancedStaticMesh < Blueprint < DataTable < StaticMesh
 class HOUDINIENGINE_API IHoudiniContentInputBuilder
 {
 public:

@@ -12,6 +12,8 @@ class AHoudiniNode;
 class ALandscape;
 class FHoudiniAttribute;
 
+#define POINT_ATTRIB_ENTRY_IDX(OWNER, POINT_INDEX) ((OWNER == HAPI_ATTROWNER_DETAIL) ? 0 : POINT_INDEX)
+
 #define GET_SPLIT_VALUE_STR SplitValueMap.IsEmpty() ? FString::FromInt(SplitKey) : SplitValueMap[SplitKey]
 
 #define SET_OBJECT_UPROPERTIES(OBJECT, ATTRIB_INDEX) for (const TSharedPtr<FHoudiniAttribute>& PropAttrib : PropAttribs)\
@@ -87,6 +89,8 @@ struct HOUDINIENGINE_API FHoudiniOutputUtils
 	static void CloseData(const float* Data, const size_t& SHMHandle);  // If SHMHandle is 0, means Data was from malloc
 
 	// -------- Geoemetry --------
+	static int32 CurveAttributeEntryIdx(const HAPI_AttributeOwner& AttribOwner, const int32& VtxIdx, const int32& CurveIdx);
+
 	// Find SplitAttrib based on "unreal_split_attr"
 	static bool HapiGetSplitValues(const int32& NodeId, const int32& PartId, const TArray<std::string>& AttribNames, const int AttribCounts[HAPI_ATTROWNER_MAX],
 		TArray<int32>& OutSplitKeys, TMap<int32, FString>& OutSplitValueMap, HAPI_AttributeOwner& InOutOwner);  // SplitValueMap will be empty is split values is int

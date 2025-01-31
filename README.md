@@ -2,7 +2,7 @@
 
 Welcome to the [repository](https://github.com/AdrianPanGithub/HoudiniEngineForUnreal) for the Houdini Engine For Unreal Plugin. 
 
-This plug-in is the completely remaster of the official Houdini Engine For Unreal from zero, with similar usages but up to 2x - 15x faster data I/O performance compare to the lastest official plug-in, native World-Partition support and much more functionalities optimized for making procedural landscape and city toolset. Moreover, this plug-in provides a set of C++ API to define your own unreal classes and assets I/O translators
+This plug-in is the completely remaster of the official Houdini Engine For Unreal from zero, with similar usages but up to 2x - 15x faster data I/O performance compare to the lastest official plug-in, native World-Partition support and much more functionalities optimized for making procedural landscape and city toolset. Moreover, this plug-in provides a set of C++ API to define your own unreal classes and assets I/O translators (See [HoudiniPCGTranslator](https://github.com/AdrianPanGithub/HoudiniPCGTranslator) and [HoudiniMassTranslator](https://github.com/AdrianPanGithub/HoudiniMassTranslator))
 
 As the usage is similar, [Official Documentation](https://www.sidefx.com/docs/houdini/unreal/) is also available for this plug-in . But there are still a lot of things are different. For the concrete usage of this plug-in, please see **Usage Brief** below, also see `Resources/houdini/otls/examples` and `Source/HoudiniEngine/Public/HoudiniEngineCommon.h`
 
@@ -15,17 +15,21 @@ Support all builds of Houdini 20.5, and Unreal Engine >= 5.3.
 NOT compatible with official plug-in, and can NOT work together with official one.
 
 # Installation
-01. In this GitHub [repository](https://github.com/AdrianPanGithub/HoudiniEngineForUnreal), click **Releases** on the right side. 
+01. In this GitHub [repository](https://github.com/AdrianPanGithub/HoudiniEngineForUnreal), click [Releases](https://github.com/AdrianPanGithub/HoudiniEngineForUnreal) on the right side. 
 02. Download the Houdini Engine zip file that matches your Unreal Engine Version.  
 03. Extract the **HoudiniEngine** folder to the **Plugins** of your Unreal Project Directory.
 
     e.g. `C:/Unreal Projects/MyGameProject/Plugins/HoudiniEngine`
 
-This Plugin will automatically find the correct houdini version on your computer, or you can specify a custom Houdini installation in the plug-in settings.
+This plug-in will automatically find the correct houdini version on your computer, or you can specify a custom Houdini installation in the plug-in settings(Houdini Engine menu/Settings).
+
+N.B. But for Steam Houdini Indie, You MUST specify your steam houdini location manually, by plug-in setting: CustomHoudiniLocation, or use "HAPI_PATH" environment variable to specify your Houdini location.
 
 # Usage Brief
 
-Here's a list of extra functionalities than official plug-in:
+All official functionalities are supported by this plug-in!
+
+And here's a list of Extra functionalities than official plug-in:
 
 N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Public/HoudiniEngineCommon.h` and `Resources/houdini/otls/examples`
 
@@ -33,7 +37,7 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 01. Provides a set of C++ API, allow writing custom I/O translator for your own unreal classes or assets
 
     See `Source/HoudiniEngine/Public/HoudiniInput.h` and `Source/HoudiniEngine/Public/HoudiniOutput.h`
-    Also see [HoudiniMassTranslator](https://github.com/AdrianPanGithub/HoudiniMassTranslator) and [HoudiniPCGTranslator](https://github.com/AdrianPanGithub/HoudiniPCGTranslator) of how to use these API.
+    Also see [HoudiniPCGTranslator](https://github.com/AdrianPanGithub/HoudiniPCGTranslator) and [HoudiniMassTranslator](https://github.com/AdrianPanGithub/HoudiniMassTranslator) of how to use these API.
 02. Finite state machine for achieving rich user interactions by only using HDA (See `Resources/houdini/otls/examples/he_example_quick_shape.hda`)
 03. Streamlined Blueprint API.
 04. Light weight, compact usage and panel widgets.
@@ -59,12 +63,13 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 07. Unreal spline input support import custom properties on your Blueprint.
 08. Texture input support.
 09. DynamicMeshComponent input support.
-10. All component type input support.
-11. All settings in the operator-path input panel could be set by parameter tags (e.g. { "check_changed", "0" }, { "unreal_ref", "1" }, See `Source/HoudiniEngine/Public/HoudiniEngineCommon.h`)
-12. Mesh inputs are packed before transform.
-13. All Input types support shared memory data transport, up to 15x faster than official shared memory session.
+10. DataAsset input support
+11. All component type input support.
+12. All settings in the operator-path input panel could be set by parameter tags (e.g. { "check_changed", "0" }, { "unreal_ref", "1" }, See `Source/HoudiniEngine/Public/HoudiniEngineCommon.h`)
+13. Mesh inputs are packed before transform.
+14. All Input types support shared memory data transport, up to 15x faster than official shared memory session.
 
-14. ... (And Much More)
+15. ... (And Much More)
 
 **Output**:
 01. Allow output special mesh and curves that could edit directly in unreal editor (See `Resources/houdini/otls/examples/he_example_quick_shape.hda`)
@@ -78,7 +83,9 @@ N.B. This list is NOT completed, for details please see `Source/HoudiniEngine/Pu
 09. Landscape output support shared memory output (6x faster than official shared-memory session, need to add my sharedmemory_volumeoutput Sop to your HDA)
 10. Support instantiate USceneComponent derived Classes(e.g. SplineMeshComponent, PointLightComponent etc. See `Resources/houdini/otls/examples/he_example_spline_mesh_output.hda`).
 11. Geometry Collection (Chaos) output as instancers (s@unreal_output_instance_type = "GC"), all of the settings on UGeometryCollection could be set by unreal_uproperty_*, also support split and partial output (See `Resources/houdini/otls/examples/he_example_chaos_geometry_collection_output.hda`).
-12. Support Static/AnimatedSparseVolumeTexture (VDBs) output
-13. Support Dynamic Mesh (Geometry Script, s@unreal_output_mesh_type = "dynamic") Output
+12. Standalone MaterialInstance asset output (s@unreal_material_instance and @unreal_material_parameter_*, but on points, See `Resources/houdini/otls/examples/he_example_vdb_output.hda`)
+13. All assets (including DataAsset) support create or modify by HDA output (See `Resources/houdini/otls/examples/he_example_split_actors.hda`, using s@unreal_object_path ("having class prefix" means create, otherwise, means modify), d@unreal_object_metadata, @unreal_uproperty_*).
+14. Support Dynamic Mesh (Geometry Script, s@unreal_output_mesh_type = "dynamic") output.
+15. Static/AnimatedSparseVolumeTexture (VDBs) output support.
 
-14. ... (And Much More)
+16. ... (And Much More)
