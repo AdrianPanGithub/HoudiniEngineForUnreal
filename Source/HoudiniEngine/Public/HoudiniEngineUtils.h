@@ -94,12 +94,10 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 
 	static FString GetPackagePath(const FString& AssetPath);  // like "/Game/HoudiniEngine/SM_Test"
 
-protected:
 	static UObject* FindOrCreateAsset(const UClass* AssetClass, const FString& AssetPath, bool* bOutFound = nullptr);
 
 	static UObject* CreateAsset(const UClass* AssetClass, const FString& AssetPath);
 
-public:
 	template<typename TAssetClass>
 	FORCEINLINE static TAssetClass* FindOrCreateAsset(const FString& AssetPath, bool* bOutFound = nullptr)  // Will try to reuse exist asset if found
 	{
@@ -118,7 +116,7 @@ public:
 
 	static void NotifyAssetChanged(const UObject* Asset);
 
-	static bool FilterClass(const UObject* Asset, const TArray<const UClass*>& AllowClasses, const TArray<const UClass*>& DisallowClasses);
+	static bool FilterClass(const TArray<const UClass*>& AllowClasses, const TArray<const UClass*>& DisallowClasses, const UClass* ObjectClass);
 
 
 	// -------- Misc ---------

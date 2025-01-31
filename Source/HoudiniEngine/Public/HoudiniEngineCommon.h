@@ -376,7 +376,9 @@ TEXT("");
 #define HAPI_PARM_TAG_UNREAL_REF_FILTER                     "unreal_ref_filter"
 
 #define HAPI_PARM_TAG_NUM_INPUT_OBJECTS			            "num_input_objects"  // For content input, <= 0 means dynamic num objects
+#define HAPI_PARM_TAG_IMPORT_RENDER_DATA                    "import_render_data"  // Will import nanite fallback mesh
 #define HAPI_PARM_TAG_LOD_IMPORT_METHOD                     "lod_import_method"
+#define HAPI_PARM_TAG_COLLISION_IMPORT_METHOD               "collision_import_method"
 #define HAPI_PARM_TAG_CURVE_COLOR                           "curve_color"
 #define HAPI_PARM_TAG_IMPORT_ROT_AND_SCALE                  "import_rot_and_scale"
 #define HAPI_PARM_TAG_IMPORT_COLLOSION_INFO                 "import_collision_info"

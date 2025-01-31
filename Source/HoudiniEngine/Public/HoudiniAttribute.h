@@ -40,18 +40,18 @@ protected:
 	static bool FindPropertyRecursive(const UStruct* Struct, const FString& PropertyName,
 		const TSharedPtr<FEditPropertyChain>& PropertyChain, size_t& OutOffset);
 
-	void SetPropertyValues(void* TargetPtr, const UStruct* TargetStruct,
-		const TSharedPtr<FEditPropertyChain>& PropertyChain, void* ContainerPtr, const int32& Index) const;
+	FORCEINLINE bool IsRestrictString() const { return ((Storage == HAPI_STORAGETYPE_STRING) || (Storage == HAPI_STORAGETYPE_STRING_ARRAY)); }
 
-	FORCEINLINE bool IsRestrictString() const { return Storage == HAPI_STORAGETYPE_STRING || Storage == HAPI_STORAGETYPE_STRING_ARRAY; }
-
-public:
 	static const TArray<FName> SupportStructNames;
 
 	static const uint8 SupportStructTupleSize[];
 
-	static const EHoudiniDataType SupportStructElemType[];
+	static const EHoudiniDataType SupportStructDataType[];
 
+	static const FName SoftObjectPathName;
+	static const FName SoftClassPathName;
+
+public:
 	static void ResetPropertiesMaps();  // Call after hot-reload
 
 	static void ClearBlueprintProperties();  // Will be called after output process finished
@@ -60,7 +60,10 @@ public:
 		const int AttribCounts[HAPI_ATTROWNER_MAX], const char* AttributePrefix, TArray<TSharedPtr<FHoudiniAttribute>>& OutAttribs);
 
 	static bool FindProperty(const UStruct* Struct, const FString& PropertyName,
-		TSharedPtr<FEditPropertyChain>& OutFoundPropertyChain, size_t& OutOffset, const bool& bVerbose);
+		TSharedPtr<FEditPropertyChain>& OutFoundPropertyChain, size_t& OutOffset, const bool& bVerbose);  // Low level API, should only be used when batch set structs
+
+	void SetPropertyValues(void* TargetPtr, const UStruct* TargetStruct,
+		const TSharedPtr<FEditPropertyChain>& PropertyChain, void* ContainerPtr, const int32& Index) const;  // Low level API, should only be used when batch set structs
 
 	bool SetStructPropertyValues(void* StructPtr, const UStruct* Struct, const int32& Index, const bool& bVerbose = false) const;
 
