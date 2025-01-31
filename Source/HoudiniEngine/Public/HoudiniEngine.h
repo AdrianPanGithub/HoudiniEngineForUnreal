@@ -121,7 +121,7 @@ public:
 	FORCEINLINE void FinishHoudiniMainTaskMessage() const { HoudiniMainTaskMessageEvent.Broadcast(-1.0f, FText::GetEmpty()); }
 
 	// -------- Input/Output Builder --------
-	// The register order of houdini engine itself: SkeletalMesh < Texture2D < FoliageType_InstancedStaticMesh < Blueprint < DataTable < StaticMesh
+	// The register order of houdini engine itself: SkeletalMesh < DataAsset < Texture2D < FoliageType_InstancedStaticMesh < Blueprint < DataTable < StaticMesh
 	FORCEINLINE void RegisterInputBuilder(const TSharedPtr<IHoudiniContentInputBuilder>& Builder) { ContentInputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterInputBuilder(const TSharedPtr<IHoudiniContentInputBuilder>& Builder) { ContentInputBuilders.Remove(Builder); }
@@ -135,7 +135,7 @@ public:
 
 	FORCEINLINE const TArray<TSharedPtr<IHoudiniComponentInputBuilder>>& GetComponentInputBuilders() const { return ComponentInputBuilders; }
 
-	// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < SkeletalMesh(KineFX) < Texture(Image and VDB) < DataTable
+	// The register order of houdini engine itself: Landscape < Instancer < Asset < Curve < Mesh < SkeletalMesh(KineFX) < MaterialInstance < Texture(Image and VDB) < DataTable
 	FORCEINLINE void RegisterOutputBuilder(const TSharedPtr<IHoudiniOutputBuilder>& Builder) { OutputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterOutputBuilder(const TSharedPtr<IHoudiniOutputBuilder>& Builder) { OutputBuilders.Remove(Builder); }
