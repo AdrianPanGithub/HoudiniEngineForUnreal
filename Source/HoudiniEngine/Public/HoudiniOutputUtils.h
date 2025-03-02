@@ -1,4 +1,4 @@
-// Copyright (c) <2024> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
+// Copyright (c) <2025> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
 
 #pragma once
 
@@ -11,6 +11,8 @@
 class AHoudiniNode;
 class ALandscape;
 class FHoudiniAttribute;
+
+#define POINT_ATTRIB_ENTRY_IDX(OWNER, POINT_INDEX) ((OWNER == HAPI_ATTROWNER_DETAIL) ? 0 : POINT_INDEX)
 
 #define GET_SPLIT_VALUE_STR SplitValueMap.IsEmpty() ? FString::FromInt(SplitKey) : SplitValueMap[SplitKey]
 
@@ -41,39 +43,39 @@ struct HOUDINIENGINE_API FHoudiniOutputUtils
 {
 	// -------- Common --------
 	template<typename TOutputHolder, typename Predicate>
-	FORCEINLINE static void UpdateOutputHolders(TArray<TOutputHolder>& SplitableOutputs, Predicate Pred,
-		TDoubleLinkedList<TOutputHolder*>& OutOldSplitableOutputs)
+	FORCEINLINE static void UpdateOutputHolders(TArray<TOutputHolder>& SplittableOutputs, Predicate Pred,
+		TDoubleLinkedList<TOutputHolder*>& OutOldSplittableOutputs)
 	{
-		for (TOutputHolder& OldOutputHolder : SplitableOutputs)
+		for (TOutputHolder& OldOutputHolder : SplittableOutputs)
 		{
 			if (Pred(OldOutputHolder))
-				OutOldSplitableOutputs.AddTail(&OldOutputHolder);
+				OutOldSplittableOutputs.AddTail(&OldOutputHolder);
 		}
 	}
 
-	template<typename TSplitableOutput, typename Predicate>
-	FORCEINLINE static void UpdateSplitableOutputHolders(const TSet<FString>& ModifySplitValues, const TSet<FString>& RemoveSplitValues,
-		TArray<TSplitableOutput>& SplitableOutputs, Predicate Pred,
-		TDoubleLinkedList<TSplitableOutput*>& OutOldSplitableOutputs, TArray<TSplitableOutput>& OutNewSplitableOutputs)
+	template<typename TSplittableOutput, typename Predicate>
+	FORCEINLINE static void UpdateSplittableOutputHolders(const TSet<FString>& ModifySplitValues, const TSet<FString>& RemoveSplitValues,
+		TArray<TSplittableOutput>& SplittableOutputs, Predicate Pred,
+		TDoubleLinkedList<TSplittableOutput*>& OutOldSplittableOutputs, TArray<TSplittableOutput>& OutNewSplittableOutputs)
 	{
-		for (TSplitableOutput& SplitableOutput : SplitableOutputs)
+		for (TSplittableOutput& SplittableOutput : SplittableOutputs)
 		{
-			if (!ModifySplitValues.Contains(SplitableOutput.GetSplitValue()) && !RemoveSplitValues.Contains(SplitableOutput.GetSplitValue()))
-				OutNewSplitableOutputs.Add(SplitableOutput);  // Means these output does NOT need to modify, just add them to NewMeshOutputs
-			else if (Pred(SplitableOutput))
-				OutOldSplitableOutputs.AddTail(&SplitableOutput);
+			if (!ModifySplitValues.Contains(SplittableOutput.GetSplitValue()) && !RemoveSplitValues.Contains(SplittableOutput.GetSplitValue()))
+				OutNewSplittableOutputs.Add(SplittableOutput);  // Means these output does NOT need to modify, just add them to NewSplittableOutputs
+			else if (Pred(SplittableOutput))
+				OutOldSplittableOutputs.AddTail(&SplittableOutput);
 		}
 	}
 
 	template<typename TOutputHolder, typename Predicate>
-	FORCEINLINE static TOutputHolder* FindOutputHolder(TDoubleLinkedList<TOutputHolder*>& InOutOldSplitableOutputs, Predicate Pred)
+	FORCEINLINE static TOutputHolder* FindOutputHolder(TDoubleLinkedList<TOutputHolder*>& InOutOldSplittableOutputs, Predicate Pred)
 	{
-		for (auto OldOutputIter = InOutOldSplitableOutputs.GetHead(); OldOutputIter; OldOutputIter = OldOutputIter->GetNextNode())
+		for (auto OldOutputIter = InOutOldSplittableOutputs.GetHead(); OldOutputIter; OldOutputIter = OldOutputIter->GetNextNode())
 		{
 			TOutputHolder* OldOutputHolder = OldOutputIter->GetValue();
 			if (Pred(OldOutputHolder))
 			{
-				InOutOldSplitableOutputs.RemoveNode(OldOutputIter);
+				InOutOldSplittableOutputs.RemoveNode(OldOutputIter);
 				return OldOutputHolder;
 			}
 		}
@@ -81,10 +83,14 @@ struct HOUDINIENGINE_API FHoudiniOutputUtils
 		return nullptr;
 	}
 
+	static FString GetCookFolderPath(const AHoudiniNode* Node);
+
 	// -------- Shared Memory --------
 	static void CloseData(const float* Data, const size_t& SHMHandle);  // If SHMHandle is 0, means Data was from malloc
 
-	// -------- Geoemetry --------
+	// -------- Geometry --------
+	static int32 CurveAttributeEntryIdx(const HAPI_AttributeOwner& AttribOwner, const int32& VtxIdx, const int32& CurveIdx);
+
 	// Find SplitAttrib based on "unreal_split_attr"
 	static bool HapiGetSplitValues(const int32& NodeId, const int32& PartId, const TArray<std::string>& AttribNames, const int AttribCounts[HAPI_ATTROWNER_MAX],
 		TArray<int32>& OutSplitKeys, TMap<int32, FString>& OutSplitValueMap, HAPI_AttributeOwner& InOutOwner);  // SplitValueMap will be empty is split values is int
@@ -105,9 +111,8 @@ struct HOUDINIENGINE_API FHoudiniOutputUtils
 
 	static void NotifyLandscapeChanged(const FName& LandscapeName, const FName& EditLayerName, const FName& LayerName, const FIntRect& ChangedExtent);
 
-
 	// -------- Material --------
 	static UMaterialInterface* GetMaterialInstance(UMaterialInterface* Material,
 		const TArray<TSharedPtr<FHoudiniAttribute>>& MatAttribs, const TFunctionRef<int32(const HAPI_AttributeOwner& AttribOwner)> Index,
-		const FString& CookFolderPath, TMap<TPair<UMaterialInterface*, FString>, UMaterialInstance*>& InOutMatParmMap);
+		const FString& CookFolderPath, TMap<TPair<UMaterialInterface*, uint32>, UMaterialInstance*>& InOutMatParmMap);
 };

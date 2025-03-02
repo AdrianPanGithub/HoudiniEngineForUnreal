@@ -1,4 +1,4 @@
-// Copyright (c) <2024> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
+// Copyright (c) <2025> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
 
 #pragma once
 
@@ -13,7 +13,7 @@ class UHoudiniInputHolder;
 
 
 UENUM()
-enum class EHoudiniInputType
+enum class EHoudiniInputType : uint8
 {
 	Content = 0,  // StaticMesh, DataTable, Texture, Blueprint, FoliageType, maybe has null holder to be placeholders
 	Curves,  // Only has one holder
@@ -24,7 +24,7 @@ enum class EHoudiniInputType
 
 
 UENUM()
-enum class EHoudiniActorFilterMethod
+enum class EHoudiniActorFilterMethod : uint8
 {
 	Selection = 0,
 	Class,
@@ -34,16 +34,7 @@ enum class EHoudiniActorFilterMethod
 };
 
 UENUM()
-enum class EHoudiniPaintUpdateMethod
-{
-	Manual = 0,  // Import manually
-	EnterPressed,  // "Enter" pressed or exit landscape edmode
-	Brushed,  // While brushing and mouse released
-	EveryCook  // While brushing, and when node cook triggered
-};
-
-UENUM()
-enum class EHoudiniMaskType
+enum class EHoudiniMaskType : uint8
 {
 	Bit = 0,
 	Weight,
@@ -51,7 +42,7 @@ enum class EHoudiniMaskType
 };
 
 UENUM()
-enum class EHoudiniStaticMeshLODImportMethod
+enum class EHoudiniStaticMeshLODImportMethod : uint8
 {
 	FirstLOD = 0,
 	LastLOD,
@@ -59,7 +50,7 @@ enum class EHoudiniStaticMeshLODImportMethod
 };
 
 UENUM()
-enum class EHoudiniMeshCollisionImportMethod
+enum class EHoudiniMeshCollisionImportMethod : uint8
 {
 	NoImportCollision = 0,
 	ImportWithMesh,
@@ -77,7 +68,7 @@ struct HOUDINIENGINE_API FHoudiniInputSettings  // All of the settings could set
 	bool bImportAsReference = false;  // for Content, World
 
 	UPROPERTY()
-	bool bCheckChanged = true;  // for Content, Landscape
+	bool bCheckChanged = true;  // for Content, World
 
 	UPROPERTY()
 	TArray<FString> Filters;  // for Content, Node, and World
@@ -134,32 +125,31 @@ struct HOUDINIENGINE_API FHoudiniInputSettings  // All of the settings could set
 	UPROPERTY()
 	TMap<FName, FString> LandscapeLayerFilterMap;
 
-	UPROPERTY()
-	EHoudiniPaintUpdateMethod PaintUpdateMethod = EHoudiniPaintUpdateMethod::Manual;
-
 	// -------- Mask ---------
 	UPROPERTY()
 	EHoudiniMaskType MaskType = EHoudiniMaskType::Bit;
 
-	UPROPERTY()
-	FString ByteMaskValueParmName;
 
 	FORCEINLINE bool HasAssetFilters() const { return !Filters.IsEmpty() || !InvertedFilters.IsEmpty(); }
 
 	bool FilterString(const FString& TargetStr) const;  // Return true if filter in, false if filter out
 
 	bool HapiParseFromParameterTags(UHoudiniInput* Input, const int32& NodeId, const int32 ParmId);
+
+	void GetFilterClasses(TArray<const UClass*>& OutAllowClasses, TArray<const UClass*>& OutDisallowClasses, const UClass* ParentClass = nullptr) const;
+
+	bool FilterActorTags(const AActor* Actor) const;
 };
 
 
-// Class to record node-inputs and operator-path-inputs, outer must be a AHouudiniNode
+// Class to record node-inputs and operator-path-inputs, outer must be a AHoudiniNode
 UCLASS()
 class HOUDINIENGINE_API UHoudiniInput : public UObject
 {
 	GENERATED_BODY()
 
 protected:
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, Category = "HoudiniInput")
 	EHoudiniInputType Type = EHoudiniInputType::Content;
 
 	UPROPERTY()
@@ -170,7 +160,7 @@ protected:
 
 	FString Value;  // Used for find corresponding after cook, only for parm-inputs
 
-	int32 GeoNodeId = -1;  // Parent "Geo", all input nodes are inside this node, so we just need to destory this node when destroy input
+	int32 GeoNodeId = -1;  // Parent "Geo", all input nodes are inside this node, so we just need to destroy this node when destroy input
 
 	int32 MergeNodeId = -1;  // For Content and World input, the node we should connect, this is a merge node, we should NOT destroy this node manually
 
@@ -190,8 +180,8 @@ protected:
 	static EHoudiniInputType ParseTypeFromString(const FString& InputName, bool& bOutTypeSpecified);
 
 public:
-	UPROPERTY()
-	TArray<TObjectPtr<UHoudiniInputHolder>> Holders;  // May be contains nullptr when input type is EHoudiniInputType::Content
+	UPROPERTY(BlueprintReadOnly, Category = "HoudiniInput")
+	TArray<TObjectPtr<UHoudiniInputHolder>> Holders;  // May contains nullptr when input type is EHoudiniInputType::Content
 
 	UPROPERTY()
 	bool bExpandSettings = false;
@@ -212,6 +202,8 @@ public:
 
 	FORCEINLINE const FHoudiniInputSettings& GetSettings() const { return Settings; }
 	
+	FORCEINLINE const bool& IsPendingClear() const { return bPendingClear; }
+
 	void SetType(const EHoudiniInputType& InNewType);
 
 
@@ -221,20 +213,25 @@ public:
 
 	bool HapiUpload();
 
-	bool HapiConnectToMergeNode(const int32& NodeId);  // For Content and World input, otherwise, set merge node id
+	bool HapiConnectToMergeNode(const int32& NodeId);  // For Content and World input, otherwise, set merge node id, MUST connect at last, after all parms has been set!
 
-	bool HapiDisconnectFromMergeNode(const int32& NodeId);  // For Content and World input, will query node id one by one, will call NotifyMergedNodeDestroyed() if successs
+	bool HapiDisconnectFromMergeNode(const int32& NodeId);  // For Content and World input, will query node id one by one, will call NotifyMergedNodeDestroyed() if success
 
 	FORCEINLINE void NotifyMergedNodeDestroyed() { if (MergedNodeCount >= 1) --MergedNodeCount; }
 
+	bool HapiCleanupHolders();
+
 	void RequestClear();  // Clear input out of cook process of is unsafe, since this will reset parameter value, so we just mark this input pending clear
 
-	bool HapiRemoveHolder(const int32& HolderIdx);  // Just remove holder out of cook process is safe
+	bool HapiRemoveHolder(const int32& HolderIdx, const bool& bShrink = true);  // Just remove holder out of cook process is safe
 
 	void Invalidate();  // Should be called without HapiDestroy()
 
 	bool HapiDestroy();  // Will NOT set parm value to empty
 
+
+	UFUNCTION(BlueprintCallable, Category = "HoudiniInput", meta = (ToolTip = "Could import Asset, Actor, Landscape or HoudiniNode for corresponding input type.\nIf this object has been imported, then will reimport it"))
+	void Import(UObject* Object);
 
 	// -------- Type specified methods --------
 	void OnAssetChanged(const UObject* Object) const;  // Will mark input holder changed, but will NOT request cook
@@ -279,11 +276,11 @@ public:
 
 	void SetImportLandscapeSplines(const bool& bImportLandscapeSplines);
 
-	void SetPaintUpdateMethod(const EHoudiniPaintUpdateMethod& PaintUpdateMethod);
-
 	void SetMaskType(const EHoudiniMaskType& MaskType);
 
-	void SetByteMaskValueParmName(const FString& ValueParmName);
+#if WITH_EDITOR
+	virtual void PostEditUndo() override;
+#endif
 };
 
 #define FOREACH_HOUDINI_INPUT(ACTION) for (const TWeakObjectPtr<AHoudiniNode>& Node : FHoudiniEngine::Get().GetCurrentNodes())\
@@ -300,7 +297,7 @@ public:
 #define FOREACH_HOUDINI_INPUT_CHECK_CHANGED(ACTION)  FOREACH_HOUDINI_INPUT(if (Input->GetSettings().bCheckChanged) { ACTION } )
 
 
-// Base class to hold input objects, outer must be a UHouudiniInput
+// Base class to hold input objects, outer must be a UHoudiniInput
 UCLASS(Abstract)
 class HOUDINIENGINE_API UHoudiniInputHolder : public UObject
 {
@@ -316,10 +313,16 @@ protected:
 	FORCEINLINE const FHoudiniInputSettings& GetSettings() const { return GetInput()->GetSettings(); }
 
 public:
+	FORCEINLINE const bool& ShouldCheckChanged() const { return GetSettings().bCheckChanged; }
+
 	FORCEINLINE void MarkChanged(const bool& bChanged) { bHasChanged = bChanged; }
 
-	virtual TSoftObjectPtr<UObject> GetAsset() const { return nullptr; }
+	UFUNCTION(BlueprintCallable, Category = "HoudiniInputHolder")
+	virtual TSoftObjectPtr<UObject> GetObject() const { return nullptr; }
 
+	virtual bool IsObjectExists() const { return true; }
+
+	UFUNCTION(BlueprintCallable, Category = "HoudiniInputHolder")
 	virtual void RequestReimport();  // Will mark this holder changed, and notify parent AHoudiniNode to cook
 
 	virtual bool HapiUpload() { return true; }
@@ -333,10 +336,12 @@ public:
 	virtual bool HasChanged() const { return bHasChanged; }
 };
 
+// Inherit from builder and register using FHoudiniEngine::RegisterInputBuilder
+// The register order of houdini engine itself: SkeletalMesh < DataAsset < Texture2D < FoliageType_InstancedStaticMesh < Blueprint < DataTable < StaticMesh
 class HOUDINIENGINE_API IHoudiniContentInputBuilder
 {
 public:
-	virtual void AppendAllowClasses(TArray<const UClass*>& InOutAllowclasses) = 0;
+	virtual void AppendAllowClasses(TArray<const UClass*>& InOutAllowClasses) = 0;
 
 	virtual UHoudiniInputHolder* CreateOrUpdate(UHoudiniInput* Input, UObject* Asset, UHoudiniInputHolder* OldHolder) = 0;
 
@@ -355,6 +360,9 @@ public:
 	}
 
 	virtual bool GetInfo(const UObject* Asset, FString& OutInfoStr) { return false; }  // For string parameter with asset info, or when saving preset
+
+
+	virtual ~IHoudiniContentInputBuilder() {};
 };
 
 
@@ -372,11 +380,16 @@ struct HOUDINIENGINE_API FHoudiniComponentInputPoint
 class HOUDINIENGINE_API FHoudiniComponentInput
 {
 public:
-	virtual void Invalidate() const = 0;  // Will then delete this, so we need NOT to reset node ids to -1
+	virtual void Invalidate() const = 0;  // Will then delete this, so we need NOT reset node ids to -1
 
-	virtual bool HapiDestroy(UHoudiniInput* Input) const = 0;  // Will then delete this, so we need NOT to reset node ids to -1
+	virtual bool HapiDestroy(UHoudiniInput* Input) const = 0;  // Will then delete this, so we need NOT reset node ids to -1
+
+
+	virtual ~FHoudiniComponentInput() {};
 };
 
+// Inherit from builder and register using FHoudiniEngine::RegisterInputBuilder
+// The register order of houdini engine itself: ActorComponent < StaticMeshComponent < SkeletalMeshComponent < SplineComponent < BrushComponent(BSP) < DynamicMeshComponent
 class HOUDINIENGINE_API IHoudiniComponentInputBuilder
 {
 public:
@@ -387,5 +400,8 @@ public:
 		int32& InOutInstancerNodeId, TArray<TSharedPtr<FHoudiniComponentInput>>& InOutComponentInputs, TArray<FHoudiniComponentInputPoint>& InOutPoints) = 0;
 
 	virtual void AppendInfo(const TArray<const UActorComponent*>& Components, const TArray<FTransform>& Transforms, const TArray<int32>& ComponentIndices,  // See the comment upon
-		const TSharedPtr<FJsonObject>& JsonObject) = 0;  // Append object info to JsonObject, keys are instance refs, values are JsonObjects that contain transoforms and meta data
+		const TSharedPtr<FJsonObject>& JsonObject) = 0;  // Append object info to JsonObject, keys are instance refs, values are JsonObjects that contain transforms and metadata
+
+
+	virtual ~IHoudiniComponentInputBuilder() {};
 };

@@ -29,7 +29,7 @@ template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<struct FHoudiniGenericP
 
 template<> HOUDINIENGINE_API UScriptStruct* StaticStruct<struct FHoudiniActorHolder>();
 
-#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_139_ENHANCED_CONSTRUCTORS \
+#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_140_ENHANCED_CONSTRUCTORS \
 	/** Standard constructor, called after all reflected properties have been initialized */ \
 	NO_API UHoudiniPresetHandler(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()); \
 private: \
@@ -43,7 +43,7 @@ public: \
 	NO_API virtual ~UHoudiniPresetHandler();
 
 
-#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_139_GENERATED_UINTERFACE_BODY() \
+#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_140_GENERATED_UINTERFACE_BODY() \
 private: \
 	static void StaticRegisterNativesUHoudiniPresetHandler(); \
 	friend struct Z_Construct_UClass_UHoudiniPresetHandler_Statics; \
@@ -52,15 +52,15 @@ public: \
 	DECLARE_SERIALIZER(UHoudiniPresetHandler)
 
 
-#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_139_GENERATED_BODY \
+#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_140_GENERATED_BODY \
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS \
-	FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_139_GENERATED_UINTERFACE_BODY() \
-	FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_139_ENHANCED_CONSTRUCTORS \
+	FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_140_GENERATED_UINTERFACE_BODY() \
+	FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_140_ENHANCED_CONSTRUCTORS \
 private: \
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 
-#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_139_INCLASS_IINTERFACE_NO_PURE_DECLS \
+#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_140_INCLASS_IINTERFACE_NO_PURE_DECLS \
 protected: \
 	virtual ~IHoudiniPresetHandler() {} \
 public: \
@@ -69,11 +69,11 @@ public: \
 	virtual UObject* _getUObject() const { return nullptr; }
 
 
-#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_136_PROLOG
-#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_144_GENERATED_BODY \
+#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_137_PROLOG
+#define FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_145_GENERATED_BODY \
 PRAGMA_DISABLE_DEPRECATION_WARNINGS \
 public: \
-	FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_139_INCLASS_IINTERFACE_NO_PURE_DECLS \
+	FID_UE5_4Test_Plugins_HoudiniEngine_Source_HoudiniEngine_Public_HoudiniEngineCommon_h_140_INCLASS_IINTERFACE_NO_PURE_DECLS \
 private: \
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
@@ -114,7 +114,7 @@ template<> HOUDINIENGINE_API UEnum* StaticEnum<EHoudiniEditOptions>();
 	op(EHoudiniCurveType::Bezier) \
 	op(EHoudiniCurveType::Interpolate) 
 
-enum class EHoudiniCurveType;
+enum class EHoudiniCurveType : int8;
 template<> struct TIsUEnumClass<EHoudiniCurveType> { enum { Value = true }; };
 template<> HOUDINIENGINE_API UEnum* StaticEnum<EHoudiniCurveType>();
 
@@ -122,7 +122,8 @@ template<> HOUDINIENGINE_API UEnum* StaticEnum<EHoudiniCurveType>();
 	op(EHoudiniStorageType::Invalid) \
 	op(EHoudiniStorageType::Int) \
 	op(EHoudiniStorageType::Float) \
-	op(EHoudiniStorageType::String) 
+	op(EHoudiniStorageType::String) \
+	op(EHoudiniStorageType::Object) 
 
 enum class EHoudiniStorageType : int32;
 template<> struct TIsUEnumClass<EHoudiniStorageType> { enum { Value = true }; };

@@ -1,4 +1,4 @@
-// Copyright (c) <2024> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
+// Copyright (c) <2025> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
 
 #pragma once
 
@@ -8,6 +8,7 @@
 #include "HAPI/HAPI_Common.h"
 
 
+enum class EHoudiniNodeEvent : uint8;
 class AHoudiniNode;
 class UHoudiniAsset;
 class IHoudiniContentInputBuilder;
@@ -28,7 +29,7 @@ public:
 protected:
 	static FHoudiniEngine* HoudiniEngineInstance;
 
-	FString LoadedHoudiniBinDir;
+	FString LoadedHoudiniDir;
 
 	void* LoadedHAPILibraryHandle = nullptr;  // Free this when Houdini install path changed, and reload the new HAPILib
 
@@ -57,8 +58,6 @@ protected:
 
 	bool bEngineFPSLimited = false;
 
-	FDelegateHandle OnNodeMovedHandle;
-
 	// -------- Listening actor input changed --------
 	FDelegateHandle OnActorChangedHandle;
 
@@ -68,12 +67,15 @@ protected:
 
 	FDelegateHandle OnActorAddedHandle;
 
+
+	FDelegateHandle OnNodeMovedHandle;
+
 	// -------- Current world exclusively --------
 	TWeakObjectPtr<UWorld> CurrWorld;
 
 	TArray<TWeakObjectPtr<AHoudiniNode>> CurrNodes;
 
-	TMap<FName, TPair<TWeakObjectPtr<AActor>, bool>> CachedNameActorLoadedMap;
+	TMap<FName, TWeakObjectPtr<AActor>> CachedNameActorMap;
 
 	void CacheNameActorMap();  // Cache when cook triggered, so we can call GetActorByName
 
@@ -105,6 +107,9 @@ protected:
 public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHoudiniNodeRegisteredEvent, AHoudiniNode*)
 	FOnHoudiniNodeRegisteredEvent OnHoudiniNodeRegisteredEvent;
+	
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FHoudiniNodeEvents, AHoudiniNode*, const EHoudiniNodeEvent)
+	FHoudiniNodeEvents HoudiniNodeEvents;
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FHoudiniAsyncTaskMessageEvent, const FText&)  // (Message), Empty means start fade out
 	FHoudiniAsyncTaskMessageEvent HoudiniAsyncTaskMessageEvent;  // Should Only broadcast in GameThread
@@ -117,21 +122,21 @@ public:
 	FORCEINLINE void FinishHoudiniMainTaskMessage() const { HoudiniMainTaskMessageEvent.Broadcast(-1.0f, FText::GetEmpty()); }
 
 	// -------- Input/Output Builder --------
-	// The register order of houdini engine itself: StaticMesh < DataTable < Blueprint < FoliageType_InstancedStaticMesh < Texture
+	// The register order of houdini engine itself: SkeletalMesh < DataAsset < Texture2D < FoliageType_InstancedStaticMesh < Blueprint < DataTable < StaticMesh
 	FORCEINLINE void RegisterInputBuilder(const TSharedPtr<IHoudiniContentInputBuilder>& Builder) { ContentInputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterInputBuilder(const TSharedPtr<IHoudiniContentInputBuilder>& Builder) { ContentInputBuilders.Remove(Builder); }
 
 	FORCEINLINE const TArray<TSharedPtr<IHoudiniContentInputBuilder>>& GetContentInputBuilders() const { return ContentInputBuilders; }
 
-	// The register order of houdini engine itself: ActorComponent < MeshComponent < SplineComponent < BrushComponent
+	// The register order of houdini engine itself: ActorComponent < StaticMeshComponent < SkeletalMeshComponent < SplineComponent < BrushComponent(BSP) < DynamicMeshComponent
 	FORCEINLINE void RegisterInputBuilder(const TSharedPtr<IHoudiniComponentInputBuilder>& Builder) { ComponentInputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterInputBuilder(const TSharedPtr<IHoudiniComponentInputBuilder>& Builder) { ComponentInputBuilders.Remove(Builder); }
 
 	FORCEINLINE const TArray<TSharedPtr<IHoudiniComponentInputBuilder>>& GetComponentInputBuilders() const { return ComponentInputBuilders; }
 
-	// The register order of houdini engine itself: Landscape < Instancer < Curve < Mesh < Texture < DataTable
+	// The register order of houdini engine itself: Landscape < Instancer < Asset < Spline/Curve < Mesh < SkeletalMesh(KineFX) < MaterialInstance < Texture(Image and VDB) < DataTable
 	FORCEINLINE void RegisterOutputBuilder(const TSharedPtr<IHoudiniOutputBuilder>& Builder) { OutputBuilders.AddUnique(Builder); }
 
 	FORCEINLINE void UnregisterOutputBuilder(const TSharedPtr<IHoudiniOutputBuilder>& Builder) { OutputBuilders.Remove(Builder); }
@@ -167,6 +172,8 @@ public:
 
 	bool HapiStopSession() const;  // Return true if successfully closed, so always call InvalidateSessionData() after this
 
+	bool HapiSaveSceneToFile(const FString& FilePath, bool& bOutSuccess);
+
 	bool HapiOpenSceneInHoudini();
 
 	void InvalidateSessionData();
@@ -185,7 +192,7 @@ public:
 
 	FORCEINLINE void RegisterLoadedAsset(const TWeakObjectPtr<const UHoudiniAsset>& InHoudiniAsset) { LoadedAssets.AddUnique(InHoudiniAsset); }
 
-	FORCEINLINE bool IsAssetLoaded(const TWeakObjectPtr<const UHoudiniAsset>& InHoudiniAsset) { return LoadedAssets.Contains(InHoudiniAsset); }
+	FORCEINLINE bool IsAssetLoaded(const TWeakObjectPtr<const UHoudiniAsset>& InHoudiniAsset) const { return LoadedAssets.Contains(InHoudiniAsset); }
 
 	FORCEINLINE const TArray<TWeakObjectPtr<AHoudiniNode>>& GetCurrentNodes() { return CurrNodes; }
 
@@ -193,7 +200,7 @@ public:
 
 	static const FString& GetPluginDir();
 
-	FORCEINLINE const FString& GetHoudiniBinDir() const { return LoadedHoudiniBinDir; }
+	FORCEINLINE const FString& GetHoudiniDir() const { return LoadedHoudiniDir; }
 
 	static void PreStartSession();
 
