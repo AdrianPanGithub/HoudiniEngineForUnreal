@@ -1,4 +1,4 @@
-// Copyright (c) <2024> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
+// Copyright (c) <2025> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -45,6 +45,7 @@ public class HoudiniEngine : ModuleRules
                 "RHI",
                 "RenderCore",
                 "StaticMeshDescription",
+                "SkeletalMeshDescription",
                 "Json",
                 "DeveloperSettings",
                 "MeshDescription",

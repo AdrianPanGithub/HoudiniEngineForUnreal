@@ -1,6 +1,13 @@
 #pragma once
 
 
+function void crack_packed_transform(const int op, prim; export vector4 rot; export vector scale)
+{
+    vector t, r;
+    cracktransform(XFORM_SRT, XFORM_XYZ, {0, 0, 0}, getpackedtransform(op, prim), t, r, scale);
+    rot = eulertoquaternion(radians(r), XFORM_XYZ);
+}
+
 function int get_asset_bounds(const string asset_ref; export vector bmin, bmax)  // return 1 if this asset has bounds info
 {
     bmin = { 0.0, 0.0, 0.0 };
