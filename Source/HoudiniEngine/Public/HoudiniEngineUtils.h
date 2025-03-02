@@ -1,4 +1,4 @@
-// Copyright (c) <2024> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
+// Copyright (c) <2025> Yuzhe Pan (childadrianpan@gmail.com). All Rights Reserved.
 
 #pragma once
 
@@ -8,10 +8,12 @@
 #include "HAPI/HAPI_Common.h"
 
 
+#define IS_ASSET_PATH_INVALID(ASSET_PATH) (!ASSET_PATH.Contains(TEXT("'/")) && !ASSET_PATH.StartsWith(TEXT("/")))
+#define PRINT_HOUDINI_FLOAT(VALUE) *FString::SanitizeFloat(FMath::RoundToInt64((VALUE) * 100.0) * 0.0001, 0)
+
+
 enum class EHoudiniVolumeConvertDataType : int;
 enum class EHoudiniStorageType : int32;
-
-#define IS_ASSET_PATH_INVALID(ASSET_PATH) (!ASSET_PATH.Contains(TEXT("'/")) && !ASSET_PATH.StartsWith(TEXT("/")))
 
 struct HOUDINIENGINE_API FHoudiniEngineUtils
 {
@@ -25,6 +27,7 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 	static bool HapiConvertStringHandles(const TArray<HAPI_StringHandle>& InSHs, TArray<std::string>& OutStrings);
 
 
+	// -------- Session Status --------
 	static bool HapiGetStatusString(const HAPI_StatusType& StatusType, const HAPI_StatusVerbosity& StatusVerbosity, FString& OutStatusString);
 
 	static void PrintFailedResult(const TCHAR* SourceLocationStr, const HAPI_Result& Result);
@@ -67,7 +70,7 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 		const char* AttribName, const int32& DesiredTupleSize, TArray<float>& OutData, HAPI_AttributeOwner& InOutOwner);  // InOutOwner should get by QueryAttributeOwner
 
 	static bool HapiGetStringAttributeValue(const int32& NodeId, const int32& PartId, const TArray<std::string>& AttribNames, const int AttribCounts[HAPI_ATTROWNER_MAX],
-		const char* AttribName, FString& OutValue);
+		const char* AttribName, FString& OutValue, bool* bOutHasAttrib = nullptr);
 
 	static bool HapiGetPrimitiveGroupNames(const HAPI_GeoInfo& GeoInfo, const HAPI_PartInfo& PartInfo, TArray<std::string>& OutPrimGroupNames);
 
@@ -79,7 +82,7 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 	// -------- Shared Memory --------
 	static const float* GetSharedMemory(const TCHAR* SHMPath, const size_t& Size32, size_t& OutHandle);
 
-	static float* FindOrCreateSharedMemory(const TCHAR* Path, const size_t& Size32, size_t& InOutHandle, bool& bOutFound);
+	static float* FindOrCreateSharedMemory(const TCHAR* SHMPath, const size_t& Size32, size_t& InOutHandle, bool& bOutFound);
 
 	static void UnmapSharedMemory(const void* SHM);
 
@@ -93,11 +96,27 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 
 	static UObject* FindOrCreateAsset(const UClass* AssetClass, const FString& AssetPath, bool* bOutFound = nullptr);
 
+	static UObject* CreateAsset(const UClass* AssetClass, const FString& AssetPath);
+
+	template<typename TAssetClass>
+	FORCEINLINE static TAssetClass* FindOrCreateAsset(const FString& AssetPath, bool* bOutFound = nullptr)  // Will try to reuse exist asset if found
+	{
+		return Cast<TAssetClass>(FindOrCreateAsset(TAssetClass::StaticClass(), AssetPath, bOutFound));
+	}
+
+	template<typename TAssetClass>
+	FORCEINLINE static TAssetClass* CreateAsset(const FString& AssetPath)  // Force new an asset, Ignore exist asset
+	{
+		return Cast<TAssetClass>(CreateAsset(TAssetClass::StaticClass(), AssetPath));
+	}
+
 	static USceneComponent* CreateComponent(AActor* Owner, const TSubclassOf<USceneComponent>& ComponentClass);
 
 	static void DestroyComponent(USceneComponent* Component);
 
 	static void NotifyAssetChanged(const UObject* Asset);
+
+	static bool FilterClass(const TArray<const UClass*>& AllowClasses, const TArray<const UClass*>& DisallowClasses, const UClass* ObjectClass);
 
 
 	// -------- Misc ---------
