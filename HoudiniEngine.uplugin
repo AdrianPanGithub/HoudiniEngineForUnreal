@@ -1,0 +1,29 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "HoudiniEngine",
+	"Description": "Completely Remaster of official Houdini Engine from Zero, 2x - 15x Faster I/O, and More functionalities optimized for making procedural landscape and city toolset",
+	"Category": "Other",
+	"CreatedBy": "Adrian Pan",
+	"CreatedByURL": "",
+	"DocsURL": "https://github.com/AdrianPanGithub/HoudiniEngineForUnreal/blob/HEAD/README.md",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/AdrianPanGithub/HoudiniEngineForUnreal/issues?q=is%3Aissue",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "HoudiniEngine",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "HoudiniEngineEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}
