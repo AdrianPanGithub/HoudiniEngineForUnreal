@@ -754,7 +754,7 @@ bool UHoudiniOutputCurve::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArray<H
 					OldSplineActorOutputs.RemoveNode(MostMatchedListNode);
 				}
 
-				if (NewSplineActorOutput.Update(Node, SplitValue, SplineClass, InstanceActorMap.FindOrAdd(SplineClass),
+				if (NewSplineActorOutput.Update(Node, Node->GetActorTransform(), SplitValue, SplineClass, InstanceActorMap.FindOrAdd(SplineClass),
 					CurveIndices, TArray<FTransform>{}, [&](AActor* Actor, const int32& CurveIdx)
 					{
 						USplineComponent* SC = nullptr;

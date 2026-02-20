@@ -451,7 +451,7 @@ void FHoudiniInputDetails::CreateWidgetContent(IDetailCategoryBuilder& CategoryB
 		FAssetData AssetData = CurrHolder.IsValid() ? IAssetRegistry::GetChecked().GetAssetByObjectPath(CurrHolder->GetObject().ToSoftObjectPath()) : FAssetData(nullptr);
 		if (!AssetData.IsValid() && AllowClasses.Num() == 1)
 			AssetData.AssetClassPath = AllowClasses[0]->GetPathName();  // Set Default class thumbnail
-		TSharedPtr<FAssetThumbnail> AssetThumbnail = MakeShareable(new FAssetThumbnail(AssetData, 64, 64, AssetThumbnailPool));
+		TSharedPtr<FAssetThumbnail> AssetThumbnail = MakeShareable(new FAssetThumbnail(AssetData, 48, 48, AssetThumbnailPool));
 	
 		TSharedPtr<STextBlock> AssetNameBlock;
 		TSharedRef<SComboButton> AssetComboButton = SNew(SComboButton)
@@ -1091,7 +1091,7 @@ static void CreateLandscapeLayerFilterWidgets(const TWeakObjectPtr<UHoudiniInput
 							if (!FilterPtr->Equals(NewFilter))
 							{
 								*FilterPtr = NewFilter;
-								if (Input->GetType() == EHoudiniInputType::World && Settings->bCheckChanged)
+								if ((Input->GetType() == EHoudiniInputType::World) && Settings->bCheckChanged)
 									RequestLandscapeReimport(Input);
 							}
 						}
@@ -1154,56 +1154,8 @@ static FText ConvertInputFiltersToText(const FHoudiniInputSettings& Settings)
 	return FText::FromString(FilterStr);
 }
 
-static void CreateActorFilterWidget(const TWeakObjectPtr<UHoudiniInput> Input, const TSharedPtr<SVerticalBox>& SettingsBox)
+static void CreateImportedActorList(const TWeakObjectPtr<UHoudiniInput> Input, TSharedPtr<SScrollBox> ImportedActorListBox)
 {
-	if (Input->GetSettings().ActorFilterMethod != EHoudiniActorFilterMethod::Selection)  // Filter actors by filters
-	{
-		TSharedPtr<SEditableTextBox> ActorFilterTextBox;
-
-		SettingsBox->AddSlot()
-		.Padding(2.0f)
-		.AutoHeight()
-		[
-			SAssignNew(ActorFilterTextBox, SEditableTextBox)
-			.Font(FAppStyle::Get().GetFontStyle(TEXT("PropertyWindow.NormalFont")))
-			.Text(ConvertInputFiltersToText(Input->GetSettings()))
-			.ToolTipText(LOCTEXT("ActorFilterHelp", "Actor Filter String\ne.g.\nLight StaticMeshActor ^PointLight\nMesh ^Cube ^Sphere"))
-		];
-
-		class SSetOnTextCommited : public SEditableTextBox
-		{
-		public:
-			void Set(const FOnTextCommitted& TextCommitted) { OnTextCommitted = TextCommitted; }
-		};
-
-		StaticCastSharedPtr<SSetOnTextCommited>(ActorFilterTextBox)->Set(FOnTextCommitted::CreateLambda(
-			[Input, ActorFilterTextBox](const FText& NewText, ETextCommit::Type TextCommitType)
-			{
-				if (Input.IsValid())
-				{
-					Input->SetFilterString(NewText.ToString());
-					if (ActorFilterTextBox.IsValid())
-						ActorFilterTextBox->SetText(ConvertInputFiltersToText(Input->GetSettings()));
-				}
-			}));
-	}
-
-	TSharedPtr<SScrollBox> ImportedActorListBox;
-	SettingsBox->AddSlot()
-	.Padding(2.0f)
-	.AutoHeight()
-	[
-		SNew(SBox)
-		.HeightOverride(FMath::Clamp(Input->Holders.Num() * 20.0f, 50.0f, 100.0f))
-		[
-			SNew(SBorder)
-			.BorderImage(&FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>("CheckBox").BackgroundImage)
-			[
-				SAssignNew(ImportedActorListBox, SScrollBox)
-			]
-		]
-	];
-	
 	// List all actors on details panel
 	for (int32 HolderIdx = 0; HolderIdx < Input->Holders.Num(); ++HolderIdx)
 	{
@@ -1274,7 +1226,7 @@ static void CreateActorFilterWidget(const TWeakObjectPtr<UHoudiniInput> Input, c
 					.ColorAndOpacity(FStyleColors::AccentRed)
 					.DesiredSizeOverride(FVector2D(14.0, 14.0))
 				]
-				.OnClicked_Lambda([Input, HolderIdx]()
+				.OnClicked_Lambda([Input, HolderIdx, ImportedActorListBox]()
 					{
 						if (Input.IsValid() && Input->Holders.IsValidIndex(HolderIdx))
 						{
@@ -1284,6 +1236,8 @@ static void CreateActorFilterWidget(const TWeakObjectPtr<UHoudiniInput> Input, c
 
 							Input->Modify();
 							HOUDINI_FAIL_INVALIDATE(Input->HapiRemoveHolder(HolderIdx));
+							ImportedActorListBox->ClearChildren();
+							CreateImportedActorList(Input, ImportedActorListBox);
 						}
 						return FReply::Handled();
 					})
@@ -1420,7 +1374,56 @@ void FHoudiniInputDetails::CreateWidgetWorld(IDetailCategoryBuilder& CategoryBui
 	// Landscape layer filter settings, could specify editlayers
 	CreateLandscapeLayerFilterWidgets(Input, LandscapeLayersBox);
 
-	CreateActorFilterWidget(Input, SettingsBox);
+	// Actor filter
+	if (Input->GetSettings().ActorFilterMethod != EHoudiniActorFilterMethod::Selection)  // Filter actors by filters
+	{
+		TSharedPtr<SEditableTextBox> ActorFilterTextBox;
+
+		SettingsBox->AddSlot()
+		.Padding(2.0f)
+		.AutoHeight()
+		[
+			SAssignNew(ActorFilterTextBox, SEditableTextBox)
+			.Font(FAppStyle::Get().GetFontStyle(TEXT("PropertyWindow.NormalFont")))
+			.Text(ConvertInputFiltersToText(Input->GetSettings()))
+			.ToolTipText(LOCTEXT("ActorFilterHelp", "Actor Filter String\ne.g.\nLight StaticMeshActor ^PointLight\nMesh ^Cube ^Sphere"))
+		];
+
+		class SSetOnTextCommited : public SEditableTextBox
+		{
+		public:
+			void Set(const FOnTextCommitted& TextCommitted) { OnTextCommitted = TextCommitted; }
+		};
+
+		StaticCastSharedPtr<SSetOnTextCommited>(ActorFilterTextBox)->Set(FOnTextCommitted::CreateLambda(
+			[Input, ActorFilterTextBox](const FText& NewText, ETextCommit::Type TextCommitType)
+			{
+				if (Input.IsValid())
+				{
+					Input->SetFilterString(NewText.ToString());
+					if (ActorFilterTextBox.IsValid())
+						ActorFilterTextBox->SetText(ConvertInputFiltersToText(Input->GetSettings()));
+				}
+			}));
+	}
+
+	// Imported Actor filter list
+	TSharedPtr<SScrollBox> ImportedActorListBox;
+	SettingsBox->AddSlot()
+	.Padding(2.0f)
+	.AutoHeight()
+	[
+		SNew(SBox)
+		.HeightOverride(FMath::Clamp(Input->Holders.Num() * 20.0f, 50.0f, 100.0f))
+		[
+			SNew(SBorder)
+			.BorderImage(&FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>("CheckBox").BackgroundImage)
+			[
+				SAssignNew(ImportedActorListBox, SScrollBox)
+			]
+		]
+	];
+	CreateImportedActorList(Input, ImportedActorListBox);
 
 	if (Input->GetSettings().ActorFilterMethod == EHoudiniActorFilterMethod::Selection)
 	{
@@ -1469,7 +1472,7 @@ void FHoudiniInputDetails::CreateWidgetWorld(IDetailCategoryBuilder& CategoryBui
 						SelectButtonTextBlock
 					]
 				]
-				.OnClicked_Lambda([Input, SelectButtonIcon, SelectButtonTextBlock, DetailsView]()
+				.OnClicked_Lambda([Input, SelectButtonIcon, SelectButtonTextBlock, DetailsView, ImportedActorListBox]()
 					{
 						if (DetailsView->IsLocked())
 						{
@@ -1490,6 +1493,9 @@ void FHoudiniInputDetails::CreateWidgetWorld(IDetailCategoryBuilder& CategoryBui
 							SelectButtonTextBlock->SetText(LOCTEXT("StartSelect", "Start Select"));
 							SelectButtonIcon->SetImage(FAppStyle::Get().GetBrush("FoliageEditMode.SetSelect"));
 							SelectButtonIcon->SetColorAndOpacity(FStyleColors::White);
+
+							ImportedActorListBox->ClearChildren();
+							CreateImportedActorList(Input, ImportedActorListBox);
 						}
 						else
 						{

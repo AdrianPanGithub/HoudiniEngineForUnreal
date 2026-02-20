@@ -3,14 +3,13 @@
 #pragma once
 
 #include "InteractiveToolBuilder.h"
-#include "BaseBehaviors/BehaviorTargetInterfaces.h"
 
 #include "HoudiniTools.generated.h"
 
 
 // -------- Manage --------
 UCLASS()
-class HOUDINIENGINEEDITOR_API UHoudiniManageToolBuilder : public UInteractiveToolBuilder
+class UHoudiniManageToolBuilder : public UInteractiveToolBuilder
 {
 	GENERATED_BODY()
 
@@ -29,13 +28,48 @@ public:
 };
 
 
+UCLASS(Abstract)
+class HOUDINIENGINEEDITOR_API UHoudiniBrushTool : public UInteractiveTool
+{
+	GENERATED_BODY()
+
+protected:
+	UWorld* TargetWorld = nullptr;  // Target World we will raycast into
+
+public:
+	virtual void Setup() override;
+
+	virtual void OnMouseUpdate(const FRay& MouseRay, const bool& bDragging, const bool bShiftDown) {}
+	virtual bool CanBeginClickDragSequence() const { return false; }
+	virtual void OnClickRelease() {}
+	virtual void ChangeBrushSize(const bool& bIncrease) {}
+};
+
+UCLASS()
+class UHoudiniBrushInputBehavior : public UInputBehavior
+{
+	GENERATED_BODY()
+
+public:
+	FORCEINLINE UHoudiniBrushTool* GetTool() const { return static_cast<UHoudiniBrushTool*>(GetOuter()); }
+
+	EInputDevices virtual GetSupportedDevices() override { return EInputDevices::Mouse | EInputDevices::Keyboard; }
+	virtual FInputCaptureRequest WantsCapture(const FInputDeviceState& InputState) override;
+	virtual FInputCaptureUpdate BeginCapture(const FInputDeviceState& InputState, EInputCaptureSide eSide) override;
+	virtual FInputCaptureUpdate UpdateCapture(const FInputDeviceState& InputState, const FInputCaptureData& CaptureData) override;
+	virtual void ForceEndCapture(const FInputCaptureData& CaptureData) override;
+
+	virtual bool WantsHoverEvents() override { return true; }
+	virtual FInputCaptureRequest WantsHoverCapture(const FInputDeviceState& InputState) override;
+};
+
+
 // -------- Mask --------
 class UHoudiniInputMask;
 class AHoudiniMaskGizmoActiveActor;
-class UModeManagerInteractiveToolsContext;
 
 UCLASS()
-class HOUDINIENGINEEDITOR_API UHoudiniMaskToolBuilder : public UInteractiveToolBuilder
+class UHoudiniMaskToolBuilder : public UInteractiveToolBuilder
 {
 	GENERATED_BODY()
 
@@ -45,53 +79,28 @@ public:
 };
 
 UCLASS()
-class HOUDINIENGINEEDITOR_API UHoudiniMaskTool : public UInteractiveTool, public IHoverBehaviorTarget, public IClickDragBehaviorTarget
+class HOUDINIENGINEEDITOR_API UHoudiniMaskTool : public UHoudiniBrushTool
 {
 	GENERATED_BODY()
 
 protected:
 	static UHoudiniInputMask* PendingTarget;  // If is valid, then means we need to activate
 
-	UWorld* TargetWorld = nullptr;		// Target World we will raycast into
-
 	int32 TransactionIdx = -1;
-
-	static const int InverseBrushModifierID = 2;
-
-	bool bBrushInversed = false;
-	
-	virtual void OnMouseUpdate(const FInputDeviceRay& DevicePos, const bool& bDragging);
 
 public:
 	TWeakObjectPtr<AHoudiniMaskGizmoActiveActor> MaskActor;
 
-	FORCEINLINE UWorld* GetWorld() const { return TargetWorld; }
-
 	static void ForceActivate(UHoudiniInputMask* MaskInput);
-
 	static bool IsPendingActivate();
+	void SetWorld(UWorld* World);
 	
-	virtual void SetWorld(UWorld* World);
-
-	// -------- UInteractiveTool --------
-	virtual void Setup() override;
 	virtual void Shutdown(EToolShutdownType ShutdownType) override;
-	
-	// -------- IHoverBehaviorTarget --------
-	virtual FInputRayHit BeginHoverSequenceHitTest(const FInputDeviceRay& PressPos) override { return FInputRayHit(true); }
-	virtual void OnBeginHover(const FInputDeviceRay& DevicePos) override {}
-	virtual bool OnUpdateHover(const FInputDeviceRay& DevicePos) override;
-	virtual void OnEndHover() override {}
 
-	// -------- IClickDragBehaviorTarget --------
-	virtual FInputRayHit CanBeginClickDragSequence(const FInputDeviceRay& PressPos) override;
-	virtual void OnClickPress(const FInputDeviceRay& PressPos) override;
-	virtual void OnClickDrag(const FInputDeviceRay& DragPos) override;
-	virtual void OnClickRelease(const FInputDeviceRay& ReleasePos) override;
-	virtual void OnTerminateDragSequence() override {}
-
-	// -------- IModifierToggleBehaviorTarget implementation (inherited via IClickDragBehaviorTarget) --------
-	virtual void OnUpdateModifierState(int ModifierID, bool bIsOn) override;
+	virtual void OnMouseUpdate(const FRay& MouseRay, const bool& bDragging, const bool bShiftDown) override;
+	virtual bool CanBeginClickDragSequence() const override;
+	virtual void OnClickRelease() override;
+	virtual void ChangeBrushSize(const bool& bIncrease) override;
 };
 
 
@@ -99,7 +108,7 @@ public:
 class UHoudiniParameter;
 
 UCLASS()
-class HOUDINIENGINEEDITOR_API UHoudiniEditToolBuilder : public UInteractiveToolBuilder
+class UHoudiniEditToolBuilder : public UInteractiveToolBuilder
 {
 	GENERATED_BODY()
 
@@ -109,44 +118,33 @@ public:
 };
 
 UCLASS()
-class HOUDINIENGINEEDITOR_API UHoudiniEditTool : public UInteractiveTool, public IHoverBehaviorTarget, public IClickDragBehaviorTarget
+class HOUDINIENGINEEDITOR_API UHoudiniEditTool : public UHoudiniBrushTool
 {
 	GENERATED_BODY()
 
 protected:
 	static bool bForceActivated;
 
-	UWorld* TargetWorld = nullptr;		// Target World we will raycast into
-
 	FVector HitPosition;  // Cached in OnMouseUpdate(), used in Render()
 
 	TArray<TWeakObjectPtr<UHoudiniParameter>> BrushAttribParms;
 
-	virtual void OnMouseUpdate(const FInputDeviceRay& DevicePos, const bool& bDragging);
-
 public:
-	float BrushSize = 8192.0f;
+	float BrushSize = 5000.0f;
 
-	
 	static void ForceActivate();
-
 	FORCEINLINE static bool IsPendingActivate() { return bForceActivated; };
-
-	virtual void SetWorld(UWorld* World);
+	FORCEINLINE void SetWorld(UWorld* World) { TargetWorld = World; }
 
 	// -------- BrushAttribParms --------
 	void ToggleAttribute(const TWeakObjectPtr<UHoudiniParameter>& AttribParm);
-
 	void ClearAttributes();
-	
 	void AddAllAttributes();
 
 	FORCEINLINE bool IsAttributeBrushing(const TWeakObjectPtr<UHoudiniParameter>& AttribParm) const { return BrushAttribParms.Contains(AttribParm); }
-
 	FORCEINLINE bool IsBrushing() const { return !BrushAttribParms.IsEmpty(); }
 
 	void CleanupBrushAttributes();  // If no editing geo, then will empty BrushAttribParms
-
 	FText GetBrushAttributesText() const;
 
 	// -------- UInteractiveTool --------
@@ -154,16 +152,8 @@ public:
 	virtual void Shutdown(EToolShutdownType ShutdownType) override;
 	virtual void Render(IToolsContextRenderAPI* RenderAPI) override;
 
-	// -------- IHoverBehaviorTarget --------
-	virtual FInputRayHit BeginHoverSequenceHitTest(const FInputDeviceRay& PressPos) override { return FInputRayHit(true); }
-	virtual void OnBeginHover(const FInputDeviceRay& DevicePos) override {}
-	virtual bool OnUpdateHover(const FInputDeviceRay& DevicePos) override;
-	virtual void OnEndHover() override {}
-
-	// -------- IClickDragBehaviorTarget --------
-	virtual FInputRayHit CanBeginClickDragSequence(const FInputDeviceRay& PressPos) override;
-	virtual void OnClickPress(const FInputDeviceRay& PressPos) override {}
-	virtual void OnClickDrag(const FInputDeviceRay& DragPos) override;
-	virtual void OnClickRelease(const FInputDeviceRay& ReleasePos) override;
-	virtual void OnTerminateDragSequence() override {}
+	virtual void OnMouseUpdate(const FRay& MouseRay, const bool& bDragging, const bool bShiftDown) override;
+	virtual bool CanBeginClickDragSequence() const override;
+	virtual void OnClickRelease() override;
+	virtual void ChangeBrushSize(const bool& bIncrease) override;
 };

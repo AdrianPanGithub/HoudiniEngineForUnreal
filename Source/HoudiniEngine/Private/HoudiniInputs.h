@@ -211,7 +211,7 @@ public:
 			HapiImportMeshDescription(SM, SMC, Settings, GeoNodeId, InOutSHMInputNodeId, InOutHandle);
 	}
 
-	static bool AppendObjectInfo(const UObject* InSM, FString& InOutInfoStr);
+	static bool AppendBoundInfo(const UStaticMesh* InSM, FString& InOutInfoStr);
 
 	void SetAsset(UStaticMesh* NewStaticMesh);
 
@@ -256,17 +256,17 @@ protected:
 
 	size_t SkeletonHandle = 0;
 
-	static bool HapiImportMeshDescription(const USkeletalMesh* SM, const USkeletalMeshComponent* SMC,
+	static bool HapiImportMeshDescription(const USkeletalMesh* SM, const USkinnedMeshComponent* SMC,
 		const FHoudiniInputSettings& Settings, const int32& GeoNodeId, int32& InOutSHMInputNodeId, size_t& InOutHandle);
 
-	static bool HapiImportRenderData(const USkeletalMesh* SM, const USkeletalMeshComponent* SMC,
+	static bool HapiImportRenderData(const USkeletalMesh* SM, const USkinnedMeshComponent* SMC,
 		const FHoudiniInputSettings& Settings, const int32& GeoNodeId, int32& InOutSHMInputNodeId, size_t& InOutHandle);
 
 	static bool HapiImportSkeleton(const USkeletalMesh* SM,
 		const FHoudiniInputSettings& Settings, const int32& GeoNodeId, int32& InOutSHMInputNodeId, size_t& InOutHandle);
 
 public:
-	static bool HapiImport(const USkeletalMesh* SM, const USkeletalMeshComponent* SMC,
+	static bool HapiImport(const USkeletalMesh* SM, const USkinnedMeshComponent* SMC,
 		const FHoudiniInputSettings& Settings, const int32& GeoNodeId,
 		int32& InOutMeshInputNodeId, size_t& InOutMeshHandle, int32& InOutSkeletonInputNodeId, size_t& InOutSkeletonHandle);
 
@@ -289,6 +289,8 @@ public:
 	virtual void AppendAllowClasses(TArray<const UClass*>& InOutAllowClasses) override { InOutAllowClasses.Add(USkeletalMesh::StaticClass()); }
 
 	virtual UHoudiniInputHolder* CreateOrUpdate(UHoudiniInput* Input, UObject* Asset, UHoudiniInputHolder* OldHolder) override;
+
+	virtual bool GetInfo(const UObject* Asset, FString& OutInfoStr) override;
 };
 
 
@@ -360,12 +362,10 @@ public:
 	FHoudiniStaticMeshComponentInput(const EHoudiniSettingsNodeType& InType) : Type(InType) {}
 
 	int32 MeshNodeId = -1;  // Must be a geo input node
-
 	size_t MeshHandle = 0;
 
-	int32 SettingsNodeId = -1;
-
 	EHoudiniSettingsNodeType Type = EHoudiniSettingsNodeType::null;
+	int32 SettingsNodeId = -1;
 
 	virtual bool HapiDestroy(UHoudiniInput* Input) const override;
 
@@ -388,14 +388,22 @@ public:
 class FHoudiniSkeletalMeshComponentInput : public FHoudiniComponentInput
 {
 public:
-	int32 MeshNodeId = -1;
+	enum class EHoudiniSettingsNodeType
+	{
+		null = 0,  // Reference only
+		he_setup_kinefx_inputs,
+		he_setup_kinefx_input,  // USkeletalMesh
+	};
 
+	FHoudiniSkeletalMeshComponentInput(const EHoudiniSettingsNodeType& InType) : Type(InType) {}
+
+	int32 MeshNodeId = -1;
 	size_t MeshHandle = 0;
 
 	int32 SkeletonNodeId = -1;
-
 	size_t SkeletonHandle = 0;
 
+	EHoudiniSettingsNodeType Type = EHoudiniSettingsNodeType::null;
 	int32 SettingsNodeId = -1;
 
 	virtual bool HapiDestroy(UHoudiniInput* Input) const override;
@@ -403,7 +411,7 @@ public:
 	virtual void Invalidate() const override;
 };
 
-class FHoudiniSkeletalMeshComponentInputBuilder : public IHoudiniComponentInputBuilder
+class FHoudiniSkinnedMeshComponentInputBuilder : public IHoudiniComponentInputBuilder
 {
 public:
 	virtual bool IsValidInput(const UActorComponent* Component) override;

@@ -20,10 +20,10 @@ void FHoudiniEngineModeCommands::RegisterCommands()
 	UI_COMMAND(ManageTool, "Manage", "Manage Houdini Nodes", EUserInterfaceActionType::ToggleButton, FInputChord());
 	ToolCommands.Add(ManageTool);
 
-	UI_COMMAND(MaskTool, "Mask", "Provide Brush Tools For Houdini Landscape Mask Inputs", EUserInterfaceActionType::ToggleButton, FInputChord());
+	UI_COMMAND(MaskTool, "Mask", "Brush Houdini Landscape Mask Inputs.\nShift: Invert Brush; []: Increase/Decrease Brush Size", EUserInterfaceActionType::ToggleButton, FInputChord());
 	ToolCommands.Add(MaskTool);
 
-	UI_COMMAND(EditTool, "Edit", "Edit Attributes and Elements of Houdini Editable Geometries", EUserInterfaceActionType::ToggleButton, FInputChord());
+	UI_COMMAND(EditTool, "Edit", "Edit Attributes and Elements of Houdini Editable Geometries,\nAlso Provides Attribute Brush", EUserInterfaceActionType::ToggleButton, FInputChord());
 	ToolCommands.Add(EditTool);
 }
 

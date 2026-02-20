@@ -60,7 +60,7 @@ void FHoudiniEngine::RegisterIntrinsicBuilders()
 
 	RegisterInputBuilder(MakeShared<FHoudiniActorComponentInputBuilder>());
 	RegisterInputBuilder(MakeShared<FHoudiniStaticMeshComponentInputBuilder>());
-	RegisterInputBuilder(MakeShared<FHoudiniSkeletalMeshComponentInputBuilder>());
+	RegisterInputBuilder(MakeShared<FHoudiniSkinnedMeshComponentInputBuilder>());
 	RegisterInputBuilder(MakeShared<FHoudiniSplineComponentInputBuilder>());
 	RegisterInputBuilder(MakeShared<FHoudiniBrushComponentInputBuilder>());
 	RegisterInputBuilder(MakeShared<FHoudiniDynamicMeshComponentInputBuilder>());

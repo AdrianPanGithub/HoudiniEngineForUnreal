@@ -7,7 +7,7 @@
 #include "HoudiniEngineCommon.h"
 
 
-void UHoudiniEngineSettings::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+void UHoudiniEngineSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	if (PropertyChangedEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(UHoudiniEngineSettings, bCookOnInputChanged))
 	{

@@ -5,7 +5,6 @@
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "EngineUtils.h"
-#include "Engine/Font.h"
 #include "CanvasTypes.h"
 
 #include "Editor/UnrealEdEngine.h"
@@ -237,10 +236,6 @@ void FHoudiniCurvesComponentVisualizer::DrawVisualizationHUD(const UActorCompone
 	const bool& bDistanceCulling = Settings->bDistanceCulling;
 	const float& CullDistance = Settings->CullDistance;
 
-	static const UFont* MetricDisplayFont = nullptr;
-	if (!MetricDisplayFont)
-		MetricDisplayFont = FindFirstObject<UFont>(TEXT("Font'/Engine/EngineFonts/Roboto.Roboto'"), EFindFirstObjectOptions::NativeFirst);
-
 	const int32 NumPoints = CurvesComponent->GetPoints().Num();
 	TArray<bool> bPointsShouldDisplay;  // Cache results for curve edge shown
 	if (bDistanceCulling)
@@ -272,8 +267,7 @@ void FHoudiniCurvesComponentVisualizer::DrawVisualizationHUD(const UActorCompone
 				Position *= POSITION_SCALE_TO_HOUDINI;
 				PixelPos *= DPIScale;
 				Canvas->DrawShadowedString(PixelPos.X, PixelPos.Y,
-					*FString::Printf(TEXT("  X:%.02f, Y:%.02f, Z:%.02f"), Position.X, Position.Y, Position.Z),
-					MetricDisplayFont,
+					*FString::Printf(TEXT("  X:%.02f, Y:%.02f, Z:%.02f"), Position.X, Position.Y, Position.Z), GEngine->GetMediumFont(),
 					(CurvesComponent->IsPointSelected(PointIdx) ? FLinearColor(Point.Color) * HOUDINI_EDIT_GEO_SELECTED_COLOR : Point.Color) * 0.8f);
 			}
 		}
@@ -313,7 +307,7 @@ void FHoudiniCurvesComponentVisualizer::DrawVisualizationHUD(const UActorCompone
 
 				PixelPos /= Canvas->GetDPIScale();
 				Canvas->DrawShadowedString(PixelPos.X, PixelPos.Y,
-					*(FString::Printf(TEXT("%.02fm"), FVector::Dist(CurrPos, NextPos) * POSITION_SCALE_TO_HOUDINI)), MetricDisplayFont, CurveColor);
+					*(FString::Printf(TEXT("%.02fm"), FVector::Dist(CurrPos, NextPos) * POSITION_SCALE_TO_HOUDINI)), GEngine->GetMediumFont(), CurveColor);
 			}
 		}
 	}
@@ -398,7 +392,7 @@ bool FHoudiniCurvesComponentVisualizer::HandleInputKey(FEditorViewportClient* Vi
 			}
 		}
 	}
-	if (Key == EKeys::End && Event == IE_Released)
+	if ((Key == EKeys::End) && (Event == IE_Released))
 	{
 		if (UHoudiniCurvesComponent* CurvesComponent = GetSelectedGeometry<UHoudiniCurvesComponent>())
 		{
@@ -450,7 +444,7 @@ bool FHoudiniCurvesComponentVisualizer::HandleInputKey(FEditorViewportClient* Vi
 	}
 	
 	
-	else if (Key == EKeys::Delete && Event == IE_Pressed)
+	else if ((Key == EKeys::Delete) && (Event == IE_Pressed))
 	{
 		if (UHoudiniCurvesComponent* CurvesComponent = GetSelectedGeometry<UHoudiniCurvesComponent>())
 		{
@@ -473,6 +467,12 @@ bool FHoudiniCurvesComponentVisualizer::HandleInputDelta(FEditorViewportClient* 
 	if (!CurvesComponent)
 		return false;
 
+	const bool bNoTranslate = DeltaTranslate.IsZero();
+	const bool bNoRotate = DeltaRotate.IsZero();
+	const bool bNoScale = DeltaScale.IsZero();
+	if (bNoTranslate && bNoRotate && bNoScale)
+		return true;
+
 	if (!bTransforming)
 	{
 		if (!bDuplicated)
@@ -481,11 +481,11 @@ bool FHoudiniCurvesComponentVisualizer::HandleInputDelta(FEditorViewportClient* 
 		bTransforming = true;
 	}
 
-	if (!DeltaTranslate.IsZero())
+	if (!bNoTranslate)
 		CurvesComponent->TranslateSelection(DeltaTranslate);
-	else if (!DeltaRotate.IsZero())
+	else if (!bNoRotate)
 		CurvesComponent->RotateSelection(DeltaRotate, Pivot.GetLocation());
-	else if (!DeltaScale.IsZero())
+	else if (!bNoScale)
 		CurvesComponent->ScaleSelection(DeltaScale, Pivot.GetLocation());
 
 	AccumulatedTransform.Accumulate(FTransform(DeltaRotate, DeltaTranslate, DeltaScale + FVector::OneVector));

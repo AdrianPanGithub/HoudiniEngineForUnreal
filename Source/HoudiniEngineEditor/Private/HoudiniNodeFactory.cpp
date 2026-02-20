@@ -7,7 +7,7 @@
 #include "HoudiniNode.h"
 
 
-#define LOCTEXT_NAMESPACE "HoudiniEngine"
+#define LOCTEXT_NAMESPACE HOUDINI_LOCTEXT_NAMESPACE
 
 UHoudiniNodeFactory::UHoudiniNodeFactory()
 {
@@ -34,7 +34,7 @@ void UHoudiniNodeFactory::PostSpawnActor(UObject* Asset, AActor* NewActor)
 	if (NewActor->bIsEditorPreviewActor)
 		return;
 
-	NewActor->SetFolderPath(HOUDINI_LOCTEXT_NAMESPACE);
+	NewActor->SetFolderPath(HOUDINI_NODE_OUTLINER_FOLDER);
 	Cast<AHoudiniNode>(NewActor)->Initialize(Cast<UHoudiniAsset>(Asset));
 }
 

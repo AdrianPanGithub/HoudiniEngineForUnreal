@@ -3,7 +3,6 @@
 #include "HoudiniAssetTypeActions.h"
 
 #include "ImageUtils.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 
 #include "DesktopPlatformModule.h"
 #include "ObjectTools.h"
@@ -15,11 +14,11 @@
 #include "HoudiniEngineStyle.h"
 
 
-#define LOCTEXT_NAMESPACE "HoudiniEngine"
+#define LOCTEXT_NAMESPACE HOUDINI_LOCTEXT_NAMESPACE
 
 FText FHoudiniAssetTypeActions::GetName() const
 {
-	return LOCTEXT("HoudiniAssetTypeActions", "Houdini Asset");
+	return LOCTEXT("HoudiniAsset", "Houdini Asset");
 }
 
 FColor FHoudiniAssetTypeActions::GetTypeColor() const
@@ -52,8 +51,8 @@ void FHoudiniAssetTypeActions::GetActions(const TArray<UObject*>& InObjects, FMe
 
 
 	MenuBuilder.AddMenuEntry(
-		LOCTEXT("HoudiniAsset_Instantiate", "Instantiate"),
-		LOCTEXT("HoudiniAsset_InstantiateTooltip", "Instantiate the selected assets in the current world."),
+		LOCTEXT("Instantiate", "Instantiate"),
+		LOCTEXT("InstantiateTooltip", "Instantiate the selected assets in the current world."),
 		FSlateIcon(FHoudiniEngineStyle::GetStyleSetName(), "ClassIcon.HoudiniNode"),
 		FUIAction(
 			FExecuteAction::CreateLambda([HoudiniAssets]
@@ -82,8 +81,8 @@ void FHoudiniAssetTypeActions::GetActions(const TArray<UObject*>& InObjects, FMe
 	);
 
 	MenuBuilder.AddMenuEntry(
-		LOCTEXT("HoudiniAsset_UsePictureAsThumbnail", "Pick a Thumbnail"),
-		LOCTEXT("HoudiniAsset_UsePictureAsThumbnailTooltip", "Pick a picture as Thumbnail"),
+		LOCTEXT("PickThumbnail", "Pick Thumbnail"),
+		LOCTEXT("PickThumbnailTooltip", "Pick a picture as Thumbnail"),
 		FSlateIcon(FHoudiniEngineStyle::GetStyleSetName(), "HoudiniEngine.ImageChooser"),
 		FUIAction(
 			FExecuteAction::CreateLambda([HoudiniAssets]
@@ -142,8 +141,8 @@ void FHoudiniAssetTypeActions::GetActions(const TArray<UObject*>& InObjects, FMe
 	);
 
 	MenuBuilder.AddMenuEntry(
-		LOCTEXT("HoudiniAsset_Reimport", "Reimport"),
-		LOCTEXT("HoudiniAsset_ReimportTooltip", "Reimport the selected assets."),
+		LOCTEXT("Reimport", "Reimport"),
+		LOCTEXT("ReimportTooltip", "Reimport the selected assets."),
 		FSlateIcon(FHoudiniEngineStyle::GetStyleSetName(), "HoudiniEngine.Rebuild"),
 		FUIAction(
 			FExecuteAction::CreateLambda([HoudiniAssets]

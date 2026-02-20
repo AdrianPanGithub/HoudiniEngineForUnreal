@@ -237,31 +237,25 @@ static bool HapiRetrieveUniqueObjectPaths(const FSoftObjectPath& DefaultObjectVa
 		OutObjectValues.Empty();
 
 	TMap<HAPI_StringHandle, int32> SHIdxMap;
-	{
-		TMap<FSoftObjectPath, int32> ObjectIdxMap;
-		const TArray<HAPI_StringHandle> UniqueSHs = TSet<HAPI_StringHandle>(InOutSHs).Array();
-		TArray<FString> UniqueStrs;
-		HOUDINI_FAIL_RETURN(FHoudiniEngineUtils::HapiConvertUniqueStringHandles(UniqueSHs, UniqueStrs));
-		for (int32 UniqueIdx = 0; UniqueIdx < UniqueSHs.Num(); ++UniqueIdx)
+	TMap<FSoftObjectPath, int32> ObjectIdxMap;
+	if (!FHoudiniEngineUtils::HapiConvertStringHandles(InOutSHs, [&](FUtf8StringView& StrView) -> int32
 		{
-			FString& UniqueStr = UniqueStrs[UniqueIdx];
 			int32 SplitIdx;
-			if (UniqueStr.FindChar(TCHAR(';'), SplitIdx))
-				UniqueStr.LeftInline(SplitIdx);
+			if (StrView.FindChar(UTF8CHAR(';'), SplitIdx))
+				StrView.LeftInline(SplitIdx);
 
-			const FSoftObjectPath ObjectValue = UniqueStr;
+			const FSoftObjectPath ObjectValue = FString(StrView);
 			if (ObjectValue == DefaultObjectValue)
-				SHIdxMap.Add(UniqueSHs[UniqueIdx], -1);
+				return -1;
 			else if (const int32* FoundIdxPtr = ObjectIdxMap.Find(ObjectValue))  // Maybe str is different, but ref to same object
-				SHIdxMap.Add(UniqueSHs[UniqueIdx], *FoundIdxPtr);
-			else
-			{
-				const int32 NewObjectIdx = OutObjectValues.Add(ObjectValue);
-				SHIdxMap.Add(UniqueSHs[UniqueIdx], NewObjectIdx);
-				ObjectIdxMap.Add(ObjectValue, NewObjectIdx);
-			}
-		}
-	}
+				return *FoundIdxPtr;
+			
+			const int32 NewObjectIdx = OutObjectValues.Add(ObjectValue);
+			ObjectIdxMap.Add(ObjectValue, NewObjectIdx);
+			return NewObjectIdx;
+		}, SHIdxMap))
+		return false;
+
 	for (int32& SH : InOutSHs)
 		SH = SHIdxMap[SH];  // Convert SH to ObjectIdx
 

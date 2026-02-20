@@ -36,29 +36,47 @@ void FHoudiniMeshComponentVisualizer::DrawVisualization(const UActorComponent* C
 	const bool& bDistanceCulling = Settings->bDistanceCulling;
 	const float& CullDistance = Settings->CullDistance;
 
-	TArray<FVector> Positions;
+	struct FMeshPoint
+	{
+		FVector Position;
+		bool bCull;
+	};
+	TArray<FMeshPoint> MeshPoints;
 	{
 		const FTransform& ComponentTransform = MeshComponent->GetComponentTransform();
 		const TArray<FVector3f>& MeshPositions = MeshComponent->GetPositions();
-		Positions.SetNumUninitialized(MeshPositions.Num());
-		for (int32 PointIdx = 0; PointIdx < MeshPositions.Num(); ++PointIdx)
-			Positions[PointIdx] = ComponentTransform.TransformPosition((FVector)MeshPositions[PointIdx]);
+		MeshPoints.SetNumUninitialized(MeshPositions.Num());
+		if (bDistanceCulling)
+		{
+			for (int32 PointIdx = 0; PointIdx < MeshPositions.Num(); ++PointIdx)
+			{
+				FMeshPoint& MeshPoint = MeshPoints[PointIdx];
+				MeshPoint.Position = ComponentTransform.TransformPosition((FVector)MeshPositions[PointIdx]);
+				MeshPoint.bCull = (FVector::Distance(MeshPoint.Position, View->CullingOrigin) >= CullDistance);
+			}
+		}
+		else
+		{
+			for (int32 PointIdx = 0; PointIdx < MeshPositions.Num(); ++PointIdx)
+			{
+				FMeshPoint& MeshPoint = MeshPoints[PointIdx];
+				MeshPoint.Position = ComponentTransform.TransformPosition((FVector)MeshPositions[PointIdx]);
+				MeshPoint.bCull = false;
+			}
+		}
 	}
 	
 	// -------- Points --------
 	if (bShowPoint)
 	{
-		for (int32 PointIdx = 0; PointIdx < Positions.Num(); ++PointIdx)
+		for (int32 PointIdx = 0; PointIdx < MeshPoints.Num(); ++PointIdx)
 		{
-			const FVector& Position = Positions[PointIdx];
-			if (bDistanceCulling)
-			{
-				if (FVector::Distance(Position, View->CullingOrigin) > CullDistance)
-					continue;
-			}
+			const FMeshPoint& MeshPoint = MeshPoints[PointIdx];
+			if (MeshPoint.bCull)
+				continue;
 
 			PDI->SetHitProxy(new HHoudiniPointVisProxy(MeshComponent, HPP_UI, PointIdx));
-			PDI->DrawPoint(Position,
+			PDI->DrawPoint(MeshPoint.Position,
 				MeshComponent->IsPointSelected(PointIdx) ? HOUDINI_EDIT_GEO_SELECTED_COLOR : FLinearColor::White, PointSize, SDPG_Foreground);
 			PDI->SetHitProxy(nullptr);
 		}
@@ -66,7 +84,14 @@ void FHoudiniMeshComponentVisualizer::DrawVisualization(const UActorComponent* C
 
 	// -------- Edges --------
 	for (const FIntVector2& Edge : MeshComponent->GetEdges())
-		PDI->DrawLine(Positions[Edge.X], Positions[Edge.Y], FLinearColor::Gray, SDPG_World);
+	{
+		const FMeshPoint& EdgePt0 = MeshPoints[Edge.X];
+		const FMeshPoint& EdgePt1 = MeshPoints[Edge.Y];
+		if (EdgePt0.bCull && EdgePt1.bCull)
+			continue;
+
+		PDI->DrawLine(EdgePt0.Position, EdgePt1.Position, FLinearColor::Gray, SDPG_World);
+	}
 
 	// -------- Polys --------
 	if (!bShowPoly)
@@ -89,7 +114,7 @@ void FHoudiniMeshComponentVisualizer::DrawVisualization(const UActorComponent* C
 		if (bIsPolySelected)
 		{
 			for (int32 VtxIdx = 0; VtxIdx < Poly.PointIndices.Num(); ++VtxIdx)
-				PDI->DrawLine(Positions[Poly.PointIndices[VtxIdx]], Positions[Poly.PointIndices[(VtxIdx == 0) ? (Poly.PointIndices.Num() - 1) : VtxIdx - 1]],
+				PDI->DrawLine(MeshPoints[Poly.PointIndices[VtxIdx]].Position, MeshPoints[Poly.PointIndices[(VtxIdx == 0) ? (Poly.PointIndices.Num() - 1) : VtxIdx - 1]].Position,
 					FLinearColor(0.9f, 0.3f, 0.0f), SDPG_World);
 		}
 
@@ -98,7 +123,7 @@ void FHoudiniMeshComponentVisualizer::DrawVisualization(const UActorComponent* C
 			bool bCull = true;
 			for (const int32& PointIdx : Poly.PointIndices)
 			{
-				if (FVector::Distance(Positions[PointIdx], View->CullingOrigin) < CullDistance)
+				if (!MeshPoints[PointIdx].bCull)
 				{
 					bCull = false;
 					break;
@@ -112,7 +137,7 @@ void FHoudiniMeshComponentVisualizer::DrawVisualization(const UActorComponent* C
 
 		FDynamicMeshBuilder MeshBuilder(PDI->View->GetFeatureLevel());
 		for (const int32& PointIndex : Poly.PointIndices)
-			MeshBuilder.AddVertex(FDynamicMeshVertex(FVector3f(Positions[PointIndex])));
+			MeshBuilder.AddVertex(FDynamicMeshVertex(FVector3f(MeshPoints[PointIndex].Position)));
 
 		for (const FIntVector4& Triangle : Poly.Triangles)
 			MeshBuilder.AddTriangle(Triangle.X, Triangle.Y, Triangle.Z);
@@ -171,6 +196,12 @@ bool FHoudiniMeshComponentVisualizer::HandleInputDelta(FEditorViewportClient* Vi
 	if (!MeshComponent)
 		return false;
 
+	const bool bNoTranslate = DeltaTranslate.IsZero();
+	const bool bNoRotate = DeltaRotate.IsZero();
+	const bool bNoScale = DeltaScale.IsZero();
+	if (bNoTranslate && bNoRotate && bNoScale)
+		return true;
+
 	if (!bTransforming)
 	{
 		MeshComponent->StartTransforming(Pivot.GetLocation());
@@ -178,11 +209,11 @@ bool FHoudiniMeshComponentVisualizer::HandleInputDelta(FEditorViewportClient* Vi
 		bTransforming = true;
 	}
 
-	if (!DeltaTranslate.IsZero())
+	if (!bNoTranslate)
 		MeshComponent->TranslateSelection(DeltaTranslate);
-	else if (!DeltaRotate.IsZero())
+	else if (!bNoRotate)
 		MeshComponent->RotateSelection(DeltaRotate, Pivot.GetLocation());
-	else if (!DeltaScale.IsZero())
+	else if (!bNoScale)
 		MeshComponent->ScaleSelection(DeltaScale, Pivot.GetLocation());
 
 	AccumulatedTransform.Accumulate(FTransform(DeltaRotate, DeltaTranslate, DeltaScale + FVector::OneVector));

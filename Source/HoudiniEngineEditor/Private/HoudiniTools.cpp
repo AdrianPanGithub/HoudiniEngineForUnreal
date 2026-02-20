@@ -3,8 +3,6 @@
 #include "HoudiniTools.h"
 
 #include "InteractiveToolManager.h"
-#include "BaseBehaviors/ClickDragBehavior.h"
-#include "BaseBehaviors/MouseHoverBehavior.h"
 #include "CollisionQueryParams.h"
 #include "ToolDataVisualizer.h"
 
@@ -21,7 +19,7 @@
 #include "HoudiniMaskGizmoActiveActor.h"
 
 
-#define LOCTEXT_NAMESPACE "UHoudiniMaskTool"
+#define LOCTEXT_NAMESPACE HOUDINI_LOCTEXT_NAMESPACE
 
 // -------- Manage --------
 UInteractiveTool* UHoudiniManageToolBuilder::BuildTool(const FToolBuilderState& SceneState) const
@@ -38,6 +36,74 @@ void UHoudiniManageTool::Setup()
 
 	AsyncTask(ENamedThreads::GameThread, [] { FHoudiniEngineEditorUtils::DisableOverrideEngineShowFlags(); });  // As ToolManager will disable AA after tool setup, we need enable it at next tick
 }
+
+
+// -------- Brush --------
+void UHoudiniBrushTool::Setup()
+{
+	UInteractiveTool::Setup();
+
+	AddInputBehavior(NewObject<UHoudiniBrushInputBehavior>(this));
+	AddToolPropertySource(this);
+
+	AsyncTask(ENamedThreads::GameThread, [] { FHoudiniEngineEditorUtils::DisableOverrideEngineShowFlags(); });  // As ToolManager will disable AA after tool setup, we need enable it at next tick
+}
+
+FInputCaptureRequest UHoudiniBrushInputBehavior::WantsCapture(const FInputDeviceState& InputState)
+{
+	if (InputState.Mouse.Left.bDown && GetTool()->CanBeginClickDragSequence())
+		return FInputCaptureRequest::Begin(this, EInputCaptureSide::Any);
+	else if ((InputState.Keyboard.ActiveKey.Button == EKeys::LeftBracket) || (InputState.Keyboard.ActiveKey.Button == EKeys::RightBracket))
+		return FInputCaptureRequest::Begin(this, EInputCaptureSide::Any);
+	return FInputCaptureRequest::Ignore();
+}
+
+FInputCaptureUpdate UHoudiniBrushInputBehavior::BeginCapture(const FInputDeviceState& InputState, EInputCaptureSide eSide)
+{
+	if (InputState.Mouse.Left.bDown)
+	{
+		GetTool()->OnMouseUpdate(InputState.Mouse.WorldRay, true, InputState.bShiftKeyDown);
+		return FInputCaptureUpdate::Begin(this, eSide);
+	}
+	else if (InputState.Keyboard.ActiveKey.Button == EKeys::LeftBracket)
+	{
+		GetTool()->ChangeBrushSize(false);
+		return FInputCaptureUpdate::Begin(this, eSide);
+	}
+	else if(InputState.Keyboard.ActiveKey.Button == EKeys::RightBracket)
+	{
+		GetTool()->ChangeBrushSize(true);
+		return FInputCaptureUpdate::Begin(this, eSide);
+	}
+	return FInputCaptureUpdate::End();
+}
+
+FInputCaptureUpdate UHoudiniBrushInputBehavior::UpdateCapture(const FInputDeviceState& InputState, const FInputCaptureData& CaptureData)
+{
+	if (InputState.Mouse.Left.bDown)
+	{
+		GetTool()->OnMouseUpdate(InputState.Mouse.WorldRay, true, InputState.bShiftKeyDown);
+		return FInputCaptureUpdate::Continue();
+	}
+	else if (InputState.Mouse.Left.bReleased)
+	{
+		GetTool()->OnClickRelease();
+		return FInputCaptureUpdate::End();
+	}
+	return FInputCaptureUpdate::End();
+}
+
+void UHoudiniBrushInputBehavior::ForceEndCapture(const FInputCaptureData& CaptureData)
+{
+	GetTool()->OnClickRelease();
+}
+
+FInputCaptureRequest UHoudiniBrushInputBehavior::WantsHoverCapture(const FInputDeviceState& InputState)
+{
+	GetTool()->OnMouseUpdate(InputState.Mouse.WorldRay, false, InputState.bShiftKeyDown);
+	return FInputCaptureRequest::Ignore();
+}
+
 
 // -------- Mask --------
 UInteractiveTool* UHoudiniMaskToolBuilder::BuildTool(const FToolBuilderState& SceneState) const
@@ -78,75 +144,31 @@ void UHoudiniMaskTool::SetWorld(UWorld* World)
 	PendingTarget = nullptr;
 }
 
-void UHoudiniMaskTool::Setup()
-{
-	UInteractiveTool::Setup();
-
-	// Add mouse input behavior
-	UClickDragInputBehavior* DragBehavior = NewObject<UClickDragInputBehavior>(); 
-	DragBehavior->Modifiers.RegisterModifier(InverseBrushModifierID, FInputDeviceState::IsShiftKeyDown);  // This call tells the Behavior to call our OnUpdateModifierState() function on mouse-down and mouse-move
-	DragBehavior->Initialize(this);
-	AddInputBehavior(DragBehavior);
-
-	UMouseHoverBehavior* HoverBehavior = NewObject<UMouseHoverBehavior>();
-	HoverBehavior->Initialize(this);
-	AddInputBehavior(HoverBehavior);
-	
-	AddToolPropertySource(this);
-
-	AsyncTask(ENamedThreads::GameThread, [] { FHoudiniEngineEditorUtils::DisableOverrideEngineShowFlags(); });  // As ToolManager will disable AA after tool setup, we need enable it at next tick
-}
-
-void UHoudiniMaskTool::OnUpdateModifierState(int ModifierID, bool bIsOn)
-{
-	// keep track of the "invert brush" modifier (shift key for mouse input)
-	if (ModifierID == InverseBrushModifierID)
-	{
-		bBrushInversed = bIsOn;
-	}
-}
-
-
-void UHoudiniMaskTool::OnMouseUpdate(const FInputDeviceRay& DevicePos, const bool& bDragging)
+void UHoudiniMaskTool::OnMouseUpdate(const FRay& MouseRay, const bool& bDragging, const bool bShiftDown)
 {
 	if (MaskActor.IsValid())
 	{
-		MaskActor->UpdateBrushPosition(DevicePos.WorldRay);
+		MaskActor->UpdateBrushPosition(MouseRay);
 
-		if (bDragging)
-			MaskActor->OnBrush(bBrushInversed);
+		if (bDragging && MaskActor->GetMaskInput().IsValid())
+		{
+			if (TransactionIdx < 0)
+			{
+				TransactionIdx = GEditor->BeginTransaction(TEXT(HOUDINI_ENGINE),
+					LOCTEXT("HoudiniInputMaskChanged", "HoudiniInputMaskChanged"), MaskActor->GetMaskInput().Get());
+				MaskActor->GetMaskInput()->ModifyAll();
+			}
+			MaskActor->OnBrush(bShiftDown);
+		}
 	}
 }
 
-bool UHoudiniMaskTool::OnUpdateHover(const FInputDeviceRay& DevicePos)
+bool UHoudiniMaskTool::CanBeginClickDragSequence() const
 {
-	OnMouseUpdate(DevicePos, false);
-	return true;
+	return (FHoudiniEngine::Get().AllowEdit() && MaskActor.IsValid() && MaskActor->CanBrush());
 }
 
-FInputRayHit UHoudiniMaskTool::CanBeginClickDragSequence(const FInputDeviceRay& PressPos)
-{
-	return (FHoudiniEngine::Get().AllowEdit() && MaskActor.IsValid() && MaskActor->CanBrush()) ? FInputRayHit(true) : FInputRayHit();
-}
-
-void UHoudiniMaskTool::OnClickPress(const FInputDeviceRay& PressPos)
-{
-	if (MaskActor.IsValid() && MaskActor->GetMaskInput().IsValid())
-	{
-		TransactionIdx = GEditor->BeginTransaction(TEXT(HOUDINI_ENGINE),
-			LOCTEXT("HoudiniInputMaskChanged", "HoudiniInputMaskChanged"), MaskActor->GetMaskInput().Get());
-		MaskActor->GetMaskInput()->ModifyAll();
-
-		OnMouseUpdate(PressPos, true);
-	}
-}
-
-void UHoudiniMaskTool::OnClickDrag(const FInputDeviceRay& DragPos)
-{
-	OnMouseUpdate(DragPos, true);
-}
-
-void UHoudiniMaskTool::OnClickRelease(const FInputDeviceRay& ReleasePos)
+void UHoudiniMaskTool::OnClickRelease()
 {
 	if (MaskActor.IsValid())
 		MaskActor->EndBrush();
@@ -156,6 +178,12 @@ void UHoudiniMaskTool::OnClickRelease(const FInputDeviceRay& ReleasePos)
 		GEditor->EndTransaction();
 		TransactionIdx = -1;
 	}
+}
+
+void UHoudiniMaskTool::ChangeBrushSize(const bool& bIncrease)
+{
+	if (MaskActor.IsValid())
+		MaskActor->SetBrushSize(MaskActor->GetBrushSize() + (bIncrease ? 500.0f : -500.0f));
 }
 
 void UHoudiniMaskTool::Shutdown(EToolShutdownType ShutdownType)
@@ -260,28 +288,10 @@ FText UHoudiniEditTool::GetBrushAttributesText() const
 	return FText::FromString(AttribsStr);
 }
 
-void UHoudiniEditTool::SetWorld(UWorld* World)
-{
-	TargetWorld = World;
-}
-
 void UHoudiniEditTool::Setup()
 {
-	UInteractiveTool::Setup();
-
-	// Add mouse input behaviors
-	UClickDragInputBehavior* DragBehavior = NewObject<UClickDragInputBehavior>();
-	DragBehavior->Initialize(this);
-	AddInputBehavior(DragBehavior);
-
-	UMouseHoverBehavior* HoverBehavior = NewObject<UMouseHoverBehavior>();
-	HoverBehavior->Initialize(this);
-	AddInputBehavior(HoverBehavior);
-
-	AddToolPropertySource(this);
+	Super::Setup();
 	AddToolPropertySource(UHoudiniAttributeParameterHolder::Get(FHoudiniEngineEditor::Get().GetSelectedGeometry()));  // We should refresh AttribParmHolder first, then construct EdtiTool Details
-
-	AsyncTask(ENamedThreads::GameThread, [] { FHoudiniEngineEditorUtils::DisableOverrideEngineShowFlags(); });  // As ToolManager will disable AA after tool setup, we need enable it at next tick
 }
 
 void UHoudiniEditTool::Shutdown(EToolShutdownType ShutdownType)
@@ -307,7 +317,7 @@ void UHoudiniEditTool::Render(IToolsContextRenderAPI* RenderAPI)
 }
 
 
-void UHoudiniEditTool::OnMouseUpdate(const FInputDeviceRay& DevicePos, const bool& bDragging)
+void UHoudiniEditTool::OnMouseUpdate(const FRay& MouseRay, const bool& bDragging, const bool bShiftDown)
 {
 	// We should NOT change selection before cook finished, because attrib panel will refresh while cook finished, if selection changed, then brush value may also changed
 	if (!FHoudiniEngine::Get().AllowEdit() || BrushAttribParms.IsEmpty())
@@ -317,7 +327,6 @@ void UHoudiniEditTool::OnMouseUpdate(const FInputDeviceRay& DevicePos, const boo
 	if (!EditGeo.IsValid() || EditGeo->HasChanged())
 		return;
 
-	const FRay& MouseRay = DevicePos.WorldRay;
 	const FVector& TraceStart = MouseRay.Origin;
 	const FVector& Direction = MouseRay.Direction;
 
@@ -335,23 +344,12 @@ void UHoudiniEditTool::OnMouseUpdate(const FInputDeviceRay& DevicePos, const boo
 	UHoudiniAttributeParameterHolder::Get()->GetEditableGeometry()->SphereSelect(HitPosition, BrushSize, bDragging);
 }
 
-bool UHoudiniEditTool::OnUpdateHover(const FInputDeviceRay& DevicePos)
+bool UHoudiniEditTool::CanBeginClickDragSequence() const
 {
-	OnMouseUpdate(DevicePos, false);
-	return true;
+	return (FHoudiniEngine::Get().AllowEdit() && !BrushAttribParms.IsEmpty());
 }
 
-FInputRayHit UHoudiniEditTool::CanBeginClickDragSequence(const FInputDeviceRay& PressPos)
-{
-	return (FHoudiniEngine::Get().AllowEdit() && !BrushAttribParms.IsEmpty()) ? FInputRayHit(true) : FInputRayHit();
-}
-
-void UHoudiniEditTool::OnClickDrag(const FInputDeviceRay& DragPos)
-{
-	OnMouseUpdate(DragPos, true);
-}
-
-void UHoudiniEditTool::OnClickRelease(const FInputDeviceRay& ReleasePos)
+void UHoudiniEditTool::OnClickRelease()
 {
 	CleanupBrushAttributes();
 
@@ -370,6 +368,11 @@ void UHoudiniEditTool::OnClickRelease(const FInputDeviceRay& ReleasePos)
 
 		UHoudiniParameter::GDisableAttributeActions = true;
 	}
+}
+
+void UHoudiniEditTool::ChangeBrushSize(const bool& bIncrease)
+{
+	BrushSize += bIncrease ? 100.0f : -100.0f;
 }
 
 #undef LOCTEXT_NAMESPACE

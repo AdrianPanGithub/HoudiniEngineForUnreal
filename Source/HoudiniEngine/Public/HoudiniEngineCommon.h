@@ -317,7 +317,7 @@ HOUDINIENGINE_API DECLARE_LOG_CATEGORY_EXTERN(LogHoudiniEngine, Log, All)
 // -------- Landscape --------
 #define HAPI_ATTRIB_UNREAL_OUTPUT_NAME                      "unreal_output_name"
 
-#define HAPI_UNREAL_ATTRIB_LANDSCAPE_LAYER_NOWEIGHTBLEND    "unreal_landscape_layer_noweightblend"  // <Deprecated>, use i@unreal_uproperty_NoWeightBlend instead
+#define HAPI_UNREAL_ATTRIB_LANDSCAPE_LAYER_NOWEIGHTBLEND    "unreal_landscape_layer_noweightblend"
 
 #define HAPI_ATTRIB_UNREAL_LANDSCAPE_HOLE_MATERIAL          "unreal_landscape_hole_material"
 #define HAPI_ATTRIB_UNREAL_LANDSCAPE_HOLE_MATERIAL_INSTANCE "unreal_landscape_hole_material_instance"
@@ -410,6 +410,15 @@ HOUDINIENGINE_API DECLARE_LOG_CATEGORY_EXTERN(LogHoudiniEngine, Log, All)
 #define HAPI_LIB_DIR                                        "dsolib"
 #define HAPI_LIB_OBJECT                                     "libHAPIL.so"
 #endif
+
+// -------- Special Property --------
+#define HOUDINI_PROPERTY_MATERIALS                          TEXT("Materials")  // Override material slots on UPrimitiveComponent, will also split InstancedStaticMeshComponent by this attribute
+#define HOUDINI_PROPERTY_COLLISION_PROFILE_NAME             TEXT("CollisionProfileName")
+#define HOUDINI_PROPERTY_COLLISION_PRESETS                  TEXT("CollisionPresets")  // Identical to "CollisionProfileName"
+#define HOUDINI_PROPERTY_INSTANCE_START_CULL_DISTANCE       TEXT("InstanceStartCullDistance")
+#define HOUDINI_PROPERTY_INSTANCE_END_CULL_DISTANCE         TEXT("InstanceEndCullDistance")
+#define HOUDINI_PROPERTY_TRANSFORMER_PROVIDER               TEXT("TransformProvider")  // For split InstancedSkinnedMeshComponent
+#define HOUDINI_PROPERTY_ACTOR_LOCATION                     TEXT("ActorLocation")  // In Houdini Coordinate
 
 // -------- Constant Name --------
 static const FName HoudiniNodeDefaultFolderPath(HOUDINI_NODE_OUTLINER_FOLDER);

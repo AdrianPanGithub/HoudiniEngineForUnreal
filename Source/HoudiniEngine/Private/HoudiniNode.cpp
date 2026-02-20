@@ -553,21 +553,19 @@ bool AHoudiniNode::HapiOnTransformed() const
 		return true;
 	}
 
+	const FMatrix DeltaXform = LastTransform.ToInverseMatrixWithScale() * NodeTransform.ToMatrixWithScale();
+
 	// Apply transform to all split actors
 	for (const auto& SplitActor : SplitActorMap)
 	{
 		if (AActor* Actor = SplitActor.Value.Load())
 		{
-			if (!Actor->GetActorTransform().Equals(NodeTransform))
-			{
-				Actor->SetActorTransform(NodeTransform);
-				Actor->Modify();
-			}
+			Actor->SetActorTransform(FTransform(Actor->GetActorTransform().ToMatrixWithScale() * DeltaXform));
+			Actor->Modify();
 		}
 	}
 
 	// Apply transform to all output actors
-	const FMatrix DeltaXform = LastTransform.ToInverseMatrixWithScale() * NodeTransform.ToMatrixWithScale();
 	for (const UHoudiniOutput* Output : Outputs)
 		Output->OnNodeTransformed(DeltaXform);
 	for (const FHoudiniTopNode& TopNode : TopNodes)
@@ -1077,12 +1075,12 @@ void AHoudiniNode::TriggerCookByParameter(const UHoudiniParameter* ChangedParm)
 
 void AHoudiniNode::TriggerCookByInput(const UHoudiniInput* ChangedInput)
 {
+	if (!GetDefault<UHoudiniEngineSettings>()->bCookOnInputChanged)
+		return;
+
 	const FString DeltaInfoPrefix = GetActorLabel() +
 		(ChangedInput->IsParameter() ? DELTAINFO_PARAMETER : DELTAINFO_INPUT) + ChangedInput->GetInputName() + TEXT("/");
 	AppendDeltaInfos(DeltaInfoPrefix + TEXT("1"), DeltaInfoPrefix + TEXT("0"));
-
-	if (!GetDefault<UHoudiniEngineSettings>()->bCookOnInputChanged)
-		return;
 
 	RequestCook();
 }
@@ -1094,11 +1092,10 @@ void AHoudiniNode::AppendDeltaInfos(const FString& NewDeltaInfo, const FString& 
 		DeltaInfo = NewDeltaInfo;
 		ReDeltaInfo = NewReDeltaInfo;
 	}
-	else
+	else  // TODO: join the delta info, e.g. "he_parm_test/parameter input/aaa bbb|curve_input/0|1|1"
 	{
 		DeltaInfo = NewDeltaInfo;
 		ReDeltaInfo = NewReDeltaInfo;
-		// TODO join the delta info, e.g. "he_parm_test/parameter input/aaa bbb|curve_input/0|1|1"
 	}
 }
 
@@ -1108,16 +1105,16 @@ void AHoudiniNode::TriggerCookByEditableGeometry(const UHoudiniEditableGeometry*
 	{
 		for (const UHoudiniInput* Input : Inputs)
 		{
-			if (Input->GetType() == EHoudiniInputType::Curves && Input->Holders.IsValidIndex(0))
+			if ((Input->GetType() == EHoudiniInputType::Curves) && Input->Holders.IsValidIndex(0))
 			{
 				if (Cast<UHoudiniInputCurves>(Input->Holders[0])->GetCurvesComponent() == ChangedEditGeo)  // ChangedEditGeo is input curves
 				{
-					if (Input->GetSettings().bCheckChanged)
+					if (Input->GetSettings().bCheckChanged && GetDefault<UHoudiniEngineSettings>()->bCookOnInputChanged)
 						TriggerCookByInput(Input);
 					else
 					{
 						Input->Holders[0]->MarkChanged(true);  // Let node know this input should reimport when next cook
-						const_cast<UHoudiniEditableGeometry*>(ChangedEditGeo)->ResetDeltaInfo();
+						const_cast<UHoudiniEditableGeometry*>(ChangedEditGeo)->ResetDeltaInfo();  // Allow selecting and editing
 					}
 
 					return;

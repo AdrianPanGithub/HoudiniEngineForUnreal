@@ -30,6 +30,39 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 
 	static bool HapiConvertUniqueStringHandles(const TArray<HAPI_StringHandle>& InUniqueSHs, TArray<std::string>& OutStrings);  // InUniqueSHs Must be uniqued
 
+protected:
+	static bool HapiGetStringHandles(const TArray<HAPI_StringHandle>& InSHs, TArray<char>& OutBuffer);
+
+public:
+	template<typename TDataType, typename TConvertFunc>
+	static bool HapiConvertStringHandles(const TArray<HAPI_StringHandle>& InSHs, TConvertFunc Func, TMap<HAPI_StringHandle, TDataType>& OutSHMap)
+	{
+		if (InSHs.IsEmpty())
+			return true;
+
+		const TArray<HAPI_StringHandle> UniqueSHs = TSet<HAPI_StringHandle>(InSHs).Array();
+
+		TArray<char> Buffer;
+		if (!HapiGetStringHandles(UniqueSHs, Buffer))
+			return false;
+
+		if (Buffer.IsEmpty())
+			return true;
+
+		// Parse the buffer to a SH-Data Map
+		int32 StringIdx = 0;
+		int32 CharOffset = 0;
+		while (CharOffset < Buffer.Num())
+		{
+			FUtf8StringView StrView = &Buffer[CharOffset];
+			CharOffset += StrView.Len() + 1;
+
+			OutSHMap.Add(UniqueSHs[StringIdx], Func(StrView));  // Convert the current string to our dictionary.
+			++StringIdx;
+		}
+
+		return true;
+	}
 
 	// -------- Session Status --------
 	static bool HapiGetStatusString(const HAPI_StatusType& StatusType, const HAPI_StatusVerbosity& StatusVerbosity, FString& OutStatusString);
@@ -104,7 +137,7 @@ struct HOUDINIENGINE_API FHoudiniEngineUtils
 	// -------- Asset ---------
 	static UMaterial* GetVertexColorMaterial(const bool& bGetTranslucent = false);
 
-	static FString GetPackagePath(const FString& AssetPath);  // like "/Game/HoudiniEngine/SM_Test"
+	static FString GetPackagePath(const FString& AssetPath);  // Return the package path like "/Game/HoudiniEngine/SM_Test"
 
 	static UObject* FindOrCreateAsset(const UClass* AssetClass, const FString& AssetPath, bool* bOutFound = nullptr);
 

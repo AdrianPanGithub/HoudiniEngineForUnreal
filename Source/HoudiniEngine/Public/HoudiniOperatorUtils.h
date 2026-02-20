@@ -142,6 +142,17 @@ public:
 };
 
 
+class HOUDINIENGINE_API FHoudiniEngineSetupKineFXInputs // he_setup_kinefx_inputs
+{
+public:
+	static bool HapiCreateNode(const int32& ParentNodeId, const FString& NodeLabel, int32& OutNodeId);
+
+	static bool HapiConnectInputs(const int32& SettingsNodeId, const int32& MeshNodeId, const int32& SkeletonNodeId, const int32& InstancerNodeId);
+
+	static bool HapiSetTargetPointGroup(const int32& SettingsNodeId, const FString& GroupStr);
+};
+
+
 struct HOUDINIENGINE_API FHoudiniEngineSetupHeightfieldInput  // he_setup_heightfield_input
 {
 	static bool HapiCreateNode(const int32& ParentNodeId, const FString& NodeLabel, int32& OutNodeId);
@@ -177,7 +188,7 @@ struct HOUDINIENGINE_API FHoudiniSopCopyToPoints
 
 	static bool HapiConnectInputs(const int32& SettingsNodeId, const int32& SrcNodeId, const int32 DstNodeId);
 
-	static bool HapiSetSourcePointGroup(const int32& SettingsNodeId, const FString& GroupStr);
+	static bool HapiSetTargetPointGroup(const int32& SettingsNodeId, const FString& GroupStr);
 };
 
 enum class EHoudiniBlastGroupType

@@ -21,34 +21,48 @@
 #include "HoudiniNode.h"
 #include "HoudiniAttribute.h"
 
+#define ENABLE_INSTANCEDSKINNEDMESH_OUTPUT ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 7)) || (ENGINE_MAJOR_VERSION > 5)
+#define WAIT_SKELETAL_MESH_COMPILATION (ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION == 7) && (ENGINE_PATCH_VERSION == 0)  // Bug in 5.7.0, the 5.7.1 Has been fixed
+#if ENABLE_INSTANCEDSKINNEDMESH_OUTPUT
+#if WAIT_SKELETAL_MESH_COMPILATION
+#include "AssetCompilingManager.h"
+#endif
+#ifdef UE_EXPERIMENTAL
+#pragma push_macro("UE_EXPERIMENTAL")
+#undef UE_EXPERIMENTAL
+#define UE_EXPERIMENTAL(VERSION, MESSAGE)
+#endif
+
+#include "Components/InstancedSkinnedMeshComponent.h"
+
+#pragma pop_macro("UE_EXPERIMENTAL")
+#endif
+
 
 bool FHoudiniInstancerOutputBuilder::HapiIsPartValid(const int32& NodeId, const HAPI_PartInfo& PartInfo, bool& bOutIsValid, bool& bOutShouldHoldByOutput)
 {
-	bOutIsValid = (PartInfo.type == HAPI_PARTTYPE_INSTANCER ||  // Instantiate packed mesh
-		(PartInfo.type == HAPI_PARTTYPE_MESH && PartInfo.faceCount == 0 && PartInfo.pointCount >= 1));  // Instantiate by attribute
+	bOutIsValid = ((PartInfo.type == HAPI_PARTTYPE_INSTANCER) ||  // Instantiate packed mesh
+		((PartInfo.type == HAPI_PARTTYPE_MESH) && (PartInfo.faceCount == 0) && (PartInfo.pointCount >= 1)));  // Instantiate by attribute
 	bOutShouldHoldByOutput = true;
 
 	return true;
 }
 
-UStaticMeshComponent* FHoudiniInstancedStaticMeshOutput::Find(const AHoudiniNode* Node) const
+UMeshComponent* FHoudiniInstancedMeshOutput::Find(const AHoudiniNode* Node) const
 {
 	return Find_Internal<false>(Component, Node);
 }
 
-UStaticMeshComponent* FHoudiniInstancedStaticMeshOutput::CreateOrUpdate(AHoudiniNode* Node,
-	const EHoudiniInstancerOutputMode& InstancedType, const FString& InSplitValue, const bool& bInSplitActor)
+UMeshComponent* FHoudiniInstancedMeshOutput::CreateOrUpdate(AHoudiniNode* Node,
+	const TSubclassOf<UMeshComponent>& Class, const FString& InSplitValue, const bool& bInSplitActor)
 {
 	USceneComponent* SMC = Component.IsValid() ? Component.Get() : nullptr;
-	CreateOrUpdateComponent(Node, SMC,  // TODO: If we need destroy the previous component if class is not corresponding?
-		(InstancedType == EHoudiniInstancerOutputMode::Auto) ? UStaticMeshComponent::StaticClass() : (InstancedType == EHoudiniInstancerOutputMode::ISMC ?
-			UInstancedStaticMeshComponent::StaticClass() : UHierarchicalInstancedStaticMeshComponent::StaticClass()),
-		InSplitValue, bInSplitActor, false);
-	Component = (UStaticMeshComponent*)SMC;
-	return (UStaticMeshComponent*)SMC;
+	CreateOrUpdateComponent(Node, SMC, Class, InSplitValue, bInSplitActor, false);
+	Component = (UMeshComponent*)SMC;
+	return (UMeshComponent*)SMC;
 }
 
-void FHoudiniInstancedStaticMeshOutput::Destroy(const AHoudiniNode* Node) const
+void FHoudiniInstancedMeshOutput::Destroy(const AHoudiniNode* Node) const
 {
 	DestroyComponent(Node, Component, false);
 	Component.Reset();
@@ -311,7 +325,7 @@ int32 FHoudiniInstancedActorOutput::GetMatchScore(const UObject* Instance, const
 	return FMath::Abs(ActorHolders.Num() - NumInsts);
 }
 
-bool FHoudiniInstancedActorOutput::Update(const AHoudiniNode* Node, const FString& InSplitValue, UObject* Instance, AActor*& InOutRefActor,
+bool FHoudiniInstancedActorOutput::Update(const AHoudiniNode* Node, const FTransform& SplitTransform, const FString& InSplitValue, UObject* Instance, AActor*& InOutRefActor,
 	const TArray<int32>& PointIndices, const TArray<FTransform>& Transforms, TFunctionRef<void(AActor*, const int32& ElemIdx)> PostFunc, const bool& bCustomFolderPath)
 {
 	Reference = Instance;
@@ -382,13 +396,12 @@ bool FHoudiniInstancedActorOutput::Update(const AHoudiniNode* Node, const FStrin
 		}
 	}
 	
-	const FTransform NodeTransform = Node->GetActorTransform();
-	const bool bNodeTransformIdenty = NodeTransform.Equals(FTransform::Identity);
+	const bool bSplitTransformIdenty = SplitTransform.Equals(FTransform::Identity);
 	for (int32 InstIdx = 0; InstIdx < ActorHolders.Num(); ++InstIdx)
 	{
 		const int32& PointIdx = PointIndices[InstIdx];
-		const FTransform ActorTransform = Transforms.IsEmpty() ? NodeTransform :
-			(bNodeTransformIdenty ? Transforms[PointIdx] : (Transforms[PointIdx] * NodeTransform));
+		const FTransform ActorTransform = Transforms.IsEmpty() ? SplitTransform :
+			(bSplitTransformIdenty ? Transforms[PointIdx] : (Transforms[PointIdx] * SplitTransform));
 
 		FHoudiniActorHolder& ActorHolder = ActorHolders[InstIdx];
 		AActor* Actor = ActorHolder.Load();
@@ -578,16 +591,31 @@ static bool HapiGetCustomFloatInfos(const int32& NodeId, const int32& PartId, co
 	return true;
 }
 
+
+enum class EHoudiniInstancerOutputMode : int8
+{
+	Auto = HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_AUTO,  // Depend on instance count, When just a single point without custom floats
+	ISMC = HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_ISMC,  // Force to generate InstancedStaticMeshComponent
+	HISMC = HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_HISMC,  // Force to generate HierarchicalInstancedStaticMeshComponent
+	Components = HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_COMPONENTS, // From USceneComponent classes, such as Blueprint, PointLightComponent etc.
+	Actors = HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_ACTORS,  // From Blueprint, DecalMaterial, PointLight etc.
+	Foliage = HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_FOLIAGE,
+	GeometryCollection = HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_CHAOS
+};
+
 FORCEINLINE static EHoudiniInstancerOutputMode GetInstancerType(const UObject* Object)
 {
-	const UStaticMesh* SM = Cast<UStaticMesh>(Object);
-	if (SM)
+	if (const UStaticMesh* SM = Cast<UStaticMesh>(Object))
 #if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 7)) || (ENGINE_MAJOR_VERSION > 5)
-		return (!SM->IsNaniteEnabled() && SM->GetNumLODs() >= 2) ?
+		return (!SM->IsNaniteEnabled() && (SM->GetNumLODs() >= 2)) ?
 #else
 		return (!SM->NaniteSettings.bEnabled && SM->GetNumLODs() >= 2) ?
 #endif
 			EHoudiniInstancerOutputMode::HISMC : EHoudiniInstancerOutputMode::Auto;
+#if ENABLE_INSTANCEDSKINNEDMESH_OUTPUT
+	else if (Object->IsA<USkeletalMesh>())
+		return EHoudiniInstancerOutputMode::ISMC;
+#endif
 	else if (Object->GetClass() == UFoliageType_InstancedStaticMesh::StaticClass())
 		return EHoudiniInstancerOutputMode::Foliage;
 	else if (const UClass* InstancedClass = Cast<UClass>(Object))
@@ -599,34 +627,20 @@ FORCEINLINE static EHoudiniInstancerOutputMode GetInstancerType(const UObject* O
 	return EHoudiniInstancerOutputMode::Actors;
 }
 
-FORCEINLINE static void RefineInstancerType(EHoudiniInstancerOutputMode& InOutInstancerType, int8& InOutNumCustomFloats, const int8& TargetInstancerType)
+FORCEINLINE static void RefineInstancerType(EHoudiniInstancerOutputMode& InOutInstancerType, int8& InOutNumCustomFloats, const EHoudiniInstancerOutputMode& TargetInstancerType)
 {
-#if 0
-	if ((InOutNumCustomFloats >= 1) && (InOutInstancerType == HAPI_INSTANCE_OUTPUT_MODE_AUTO))
-		InOutInstancerType = HAPI_INSTANCE_OUTPUT_MODE_ISMC;
-
-	if (InOutInstancerType <= HAPI_INSTANCE_OUTPUT_MODE_HISMC)
-	{
-		if (TargetInstancerType != HAPI_INSTANCE_OUTPUT_MODE_COMPONENTS)
-			InOutInstancerType = FMath::Max(InOutInstancerType, TargetInstancerType);
-	}
-
-	if (InOutInstancerType >= HAPI_INSTANCE_OUTPUT_MODE_COMPONENTS)  // Actors instancer do NOT have CustomFloats
-		InOutNumCustomFloats = 0;
-#else
 	if ((InOutNumCustomFloats >= 1) &&
-		(InOutInstancerType == EHoudiniInstancerOutputMode(HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_AUTO)))  // If has per instance data, then we should treat it is
-		InOutInstancerType = EHoudiniInstancerOutputMode(HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_ISMC);
+		(InOutInstancerType == EHoudiniInstancerOutputMode::Auto))  // If has per instance data, then we should treat it is
+		InOutInstancerType = EHoudiniInstancerOutputMode::ISMC;
 
-	if (InOutInstancerType <= EHoudiniInstancerOutputMode(HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_HISMC))
+	if (InOutInstancerType <= EHoudiniInstancerOutputMode::HISMC)
 	{
-		if (TargetInstancerType != HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_COMPONENTS)
-			InOutInstancerType = EHoudiniInstancerOutputMode(FMath::Max(int8(InOutInstancerType), TargetInstancerType));
+		if (TargetInstancerType != EHoudiniInstancerOutputMode::Components)
+			InOutInstancerType = EHoudiniInstancerOutputMode(FMath::Max(int8(InOutInstancerType), int8(TargetInstancerType)));
 	}
 
-	if (InOutInstancerType >= EHoudiniInstancerOutputMode(HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_COMPONENTS))  // Actors instancer do NOT have CustomFloats
+	if (InOutInstancerType >= EHoudiniInstancerOutputMode::Components)  // Actors instancer do NOT have CustomFloats
 		InOutNumCustomFloats = 0;
-#endif
 }
 
 static bool HapiGetInstanceOutputModes(const int32& NodeId, const int32& PartId, const TArray<std::string>& AttribNames, const int AttribCounts[HAPI_ATTROWNER_MAX],
@@ -696,6 +710,17 @@ static bool HapiGetInstanceOutputModes(const int32& NodeId, const int32& PartId,
 	// ISMC
 	return HapiGetInstanceOutputModesDeprecatedLambda(
 		HAPI_UNREAL_ATTRIB_FORCE_INSTANCER, HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_ISMC, TEXT("instance"));
+}
+
+template<typename TAssetClass>
+FORCEINLINE static TAssetClass* LoadAssetFromHoudiniString(const std::string& Str)
+{
+	FString AssetRefStr = UTF8_TO_TCHAR(Str.c_str());
+	int32 SplitIdx;
+	if (AssetRefStr.FindChar(TCHAR(';'), SplitIdx))
+		AssetRefStr.LeftInline(SplitIdx);
+	TAssetClass* LoadedAsset = LoadObject<TAssetClass>(nullptr, *AssetRefStr, nullptr, LOAD_Quiet | LOAD_NoWarn);
+	return (IsValid(LoadedAsset) ? LoadedAsset : nullptr);
 }
 
 bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArray<HAPI_PartInfo>& PartInfos)
@@ -850,7 +875,7 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 				int8 NumCustomFloats = NumCustomFloatsData.IsEmpty() ? 0 : NumCustomFloatsData[POINT_ATTRIB_ENTRY_IDX(NumCustomFloatsOwner, PointIdx)];
 				EHoudiniInstancerOutputMode InstanceType = EHoudiniInstancerOutputMode::Auto;
 				RefineInstancerType(InstanceType, NumCustomFloats,  // If NumCustomFloats >= 1, then type will > EHoudiniInstancerOutputMode::ISMC
-					InstanceOutputModes.IsEmpty() ? HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_AUTO : InstanceOutputModes[POINT_ATTRIB_ENTRY_IDX(InstanceOutputModeOwner, PointIdx)]);
+					EHoudiniInstancerOutputMode(InstanceOutputModes.IsEmpty() ? HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_AUTO : InstanceOutputModes[POINT_ATTRIB_ENTRY_IDX(InstanceOutputModeOwner, PointIdx)]));
 				
 				// Finally, add point index to the specify group
 				for (UObject* Instance : InstancedSMs)
@@ -891,28 +916,24 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 						HAPI_ATTRIB_UNREAL_INSTANCE, &AttribInfo, InstanceRefSHs.GetData(), 0, AttribInfo.count));
 
 					TMap<HAPI_StringHandle, TPair<UObject*, EHoudiniInstancerOutputMode>> SHInstanceInfoMap;
-					const TArray<HAPI_StringHandle> UniqueInstanceRefSHs = TSet<HAPI_StringHandle>(InstanceRefSHs).Array();
-					TArray<FString> UniqueInstanceRefs;
-					HOUDINI_FAIL_RETURN(FHoudiniEngineUtils::HapiConvertUniqueStringHandles(UniqueInstanceRefSHs, UniqueInstanceRefs));
-					for (int32 UniqueIdx = 0; UniqueIdx < UniqueInstanceRefSHs.Num(); ++UniqueIdx)
-					{
-						UObject* Instance = nullptr;
-						FString& InstanceAssetRef = UniqueInstanceRefs[UniqueIdx];
-						if (!InstanceAssetRef.IsEmpty())  // Do NOT use "IS_ASSET_PATH_INVALID", as strings like "PointLight", "SplineMeshComponent" also can be instantiated
+					if (!FHoudiniEngineUtils::HapiConvertStringHandles(InstanceRefSHs, [](FUtf8StringView& StrView) -> TPair<UObject*, EHoudiniInstancerOutputMode>
 						{
-							int32 SplitIdx;
-							if (InstanceAssetRef.FindChar(TCHAR(';'), SplitIdx))  // UHoudiniParameterAsset support import asset ref with info, and append by ';', so we need to support it here
-								InstanceAssetRef.LeftInline(SplitIdx);
+							UObject* Instance = nullptr;
+							if (!StrView.IsEmpty())  // Do NOT use "IS_ASSET_PATH_INVALID", as strings like "PointLight", "SplineMeshComponent" also can be instantiated
+							{
+								int32 SplitIdx;
+								if (StrView.FindChar(UTF8CHAR(';'), SplitIdx))  // UHoudiniParameterAsset support import asset ref with info, and append by ';', so we need to support it here
+									StrView.LeftInline(SplitIdx);
+								const FString InstanceAssetRef(StrView);
 
-							Instance = LoadObject<UObject>(nullptr, *InstanceAssetRef, nullptr, LOAD_Quiet | LOAD_NoWarn);
-							if (!Instance)  // Maybe is the class name, like "PointLight", "SplineMeshComponent"
-								Instance = FindFirstObject<UClass>(*InstanceAssetRef, EFindFirstObjectOptions::NativeFirst);
-						}
-
-						SHInstanceInfoMap.Add(UniqueInstanceRefSHs[UniqueIdx],
-							(IsValid(Instance) ? TPair<UObject*, EHoudiniInstancerOutputMode>(Instance, GetInstancerType(Instance)) :
-								TPair<UObject*, EHoudiniInstancerOutputMode>(nullptr, EHoudiniInstancerOutputMode::Auto)));
-					}
+								Instance = LoadObject<UObject>(nullptr, *InstanceAssetRef, nullptr, LOAD_Quiet | LOAD_NoWarn);
+								if (!Instance)  // Maybe is the class name, like "PointLight", "SplineMeshComponent"
+									Instance = FindFirstObject<UClass>(*InstanceAssetRef, EFindFirstObjectOptions::NativeFirst);
+							}
+							return (IsValid(Instance) ? TPair<UObject*, EHoudiniInstancerOutputMode>(Instance, GetInstancerType(Instance)) :
+								TPair<UObject*, EHoudiniInstancerOutputMode>(nullptr, EHoudiniInstancerOutputMode::Auto));
+						}, SHInstanceInfoMap))
+						return false;
 
 					Instances.SetNumUninitialized(AttribInfo.count);
 					InstanceTypes.SetNumUninitialized(AttribInfo.count);
@@ -957,15 +978,14 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 
 				int8 NumCustomFloats = NumCustomFloatsData.IsEmpty() ? 0 : NumCustomFloatsData[POINT_ATTRIB_ENTRY_IDX(NumCustomFloatsOwner, PointIdx)];
 				EHoudiniInstancerOutputMode InstanceType = InstanceTypes.IsEmpty() ? EHoudiniInstancerOutputMode::Auto : InstanceTypes[POINT_ATTRIB_ENTRY_IDX(InstanceOwner, PointIdx)];
+				EHoudiniInstancerOutputMode SpecifiedInstanceType = InstanceOutputModes.IsEmpty() ? InstanceType : EHoudiniInstancerOutputMode(InstanceOutputModes[POINT_ATTRIB_ENTRY_IDX(InstanceOutputModeOwner, PointIdx)]);
 				UObject* Instance = Instances.IsEmpty() ? nullptr : Instances[POINT_ATTRIB_ENTRY_IDX(InstanceOwner, PointIdx)];
-				if (InstanceType == EHoudiniInstancerOutputMode::GeometryCollection)  // Can only construct geometry collection by StaticMeshes
+				switch (SpecifiedInstanceType)
 				{
-					if (!IsValid(Instance) || !Instance->IsA<UStaticMesh>())
-						InstanceType = EHoudiniInstancerOutputMode::Auto;
+				case EHoudiniInstancerOutputMode::GeometryCollection:  // Only StaticMesh can construct Chaos GeometryCollection and Foliage
+				case EHoudiniInstancerOutputMode::Foliage: { if (!IsValid(Instance) || !Instance->IsA<UStaticMesh>()) SpecifiedInstanceType = InstanceType; } break;
 				}
-				RefineInstancerType(InstanceType, NumCustomFloats,  // If NumCustomFloats >= 1, then type will > EHoudiniInstancerOutputMode::ISMC
-					InstanceOutputModes.IsEmpty() ? HAPI_UNREAL_OUTPUT_INSTANCE_TYPE_AUTO : InstanceOutputModes[POINT_ATTRIB_ENTRY_IDX(InstanceOutputModeOwner, PointIdx)]);
-				
+				RefineInstancerType(InstanceType, NumCustomFloats, SpecifiedInstanceType);  // If NumCustomFloats >= 1, then type will > EHoudiniInstancerOutputMode::ISMC
 				
 				// Finally, add point index to the specify group
 				const TPair<TPair<EHoudiniInstancerOutputMode, int8>, UObject*> InstanceIdentifier = IsValid(Instance) ?
@@ -988,8 +1008,8 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 
 
 	// -------- Update output holders --------
-	TDoubleLinkedList<FHoudiniInstancedStaticMeshOutput*> OldInstancedStaticMeshOutputs;
-	TArray<FHoudiniInstancedStaticMeshOutput> NewInstancedStaticMeshOutputs;
+	TDoubleLinkedList<FHoudiniInstancedMeshOutput*> OldInstancedMeshOutputs;
+	TArray<FHoudiniInstancedMeshOutput> NewInstancedMeshOutputs;
 	TDoubleLinkedList<FHoudiniInstancedComponentOutput*> OldInstancedComponentOutputs;
 	TArray<FHoudiniInstancedComponentOutput> NewInstancedComponentOutputs;
 	TDoubleLinkedList<FHoudiniInstancedActorOutput*> OldInstancedActorOutputs;
@@ -1017,8 +1037,8 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 			}
 		}
 
-		FHoudiniOutputUtils::UpdateSplittableOutputHolders(ModifySplitValues, RemoveSplitValues, InstancedStaticMeshOutputs,
-			[Node](const FHoudiniInstancedStaticMeshOutput& Holder) { return IsValid(Holder.Find(Node)); }, OldInstancedStaticMeshOutputs, NewInstancedStaticMeshOutputs);
+		FHoudiniOutputUtils::UpdateSplittableOutputHolders(ModifySplitValues, RemoveSplitValues, InstancedMeshOutputs,
+			[Node](const FHoudiniInstancedMeshOutput& Holder) { return IsValid(Holder.Find(Node)); }, OldInstancedMeshOutputs, NewInstancedMeshOutputs);
 		FHoudiniOutputUtils::UpdateSplittableOutputHolders(ModifySplitValues, RemoveSplitValues, InstancedComponentOutputs,
 			[Node](FHoudiniInstancedComponentOutput& Holder) { return Holder.HasValidAndCleanup(Node); }, OldInstancedComponentOutputs, NewInstancedComponentOutputs);
 		FHoudiniOutputUtils::UpdateSplittableOutputHolders(ModifySplitValues, RemoveSplitValues, InstancedActorOutputs,
@@ -1031,8 +1051,8 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 	else
 	{
 		// Collect valid old output holders for reuse
-		FHoudiniOutputUtils::UpdateOutputHolders(InstancedStaticMeshOutputs,
-			[Node](const FHoudiniInstancedStaticMeshOutput& Holder) { return IsValid(Holder.Find(Node)); }, OldInstancedStaticMeshOutputs);
+		FHoudiniOutputUtils::UpdateOutputHolders(InstancedMeshOutputs,
+			[Node](const FHoudiniInstancedMeshOutput& Holder) { return IsValid(Holder.Find(Node)); }, OldInstancedMeshOutputs);
 		FHoudiniOutputUtils::UpdateOutputHolders(InstancedComponentOutputs,
 			[Node](FHoudiniInstancedComponentOutput& Holder) { return Holder.HasValidAndCleanup(Node); }, OldInstancedComponentOutputs);
 		FHoudiniOutputUtils::UpdateOutputHolders(InstancedActorOutputs,
@@ -1118,6 +1138,11 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 		HOUDINI_FAIL_RETURN(FHoudiniAttribute::HapiRetrieveAttributes(NodeId, PartId, AttribNames, PartInfo.attributeCounts,
 			HAPI_ATTRIB_PREFIX_UNREAL_UPROPERTY, PropAttribs));
 
+		FHoudiniAttribute* ActorLocationAttrib = nullptr;
+		if (const TSharedPtr<FHoudiniAttribute>* ActorLocationAttribPtr = PropAttribs.FindByPredicate([](const TSharedPtr<FHoudiniAttribute>& Attrib)
+			{ return Attrib->GetAttributeName().Equals(HOUDINI_PROPERTY_ACTOR_LOCATION, ESearchCase::IgnoreCase); }))
+			ActorLocationAttrib = ActorLocationAttribPtr->Get();
+
 		const bool bCustomFolderPath = PropAttribs.ContainsByPredicate([](const TSharedPtr<FHoudiniAttribute>& Attrib)
 			{
 				return Attrib->GetAttributeName().Equals(TEXT("FolderPath"), ESearchCase::IgnoreCase);
@@ -1126,7 +1151,7 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 		// We need to split ISMCs by override material attribute
 		FHoudiniAttribute* MatAttrib = nullptr;
 		if (const TSharedPtr<FHoudiniAttribute>* MatAttribPtr = PropAttribs.FindByPredicate(
-			[](const TSharedPtr<FHoudiniAttribute>& Attrib) { return (Attrib->GetAttributeName() == TEXT("Materials")); }))
+			[](const TSharedPtr<FHoudiniAttribute>& Attrib) { return Attrib->GetAttributeName().Equals(HOUDINI_PROPERTY_MATERIALS, ESearchCase::IgnoreCase); }))
 			MatAttrib = MatAttribPtr->Get();
 		if (MatAttrib)
 		{
@@ -1135,42 +1160,83 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 				MatAttrib = nullptr;
 		}
 
+		class FHoudiniStringAttributDataAccessor : public FHoudiniAttribute
+		{
+		public:
+			const TArray<int32>& GetIntValues() const { return IntValues; }
+			const TArray<std::string>& GetStringValues() const { return StringValues; }
+		};
+
 		TArray<UMaterialInterface*> Mats;
 		TConstArrayView<int32> MatArrayCounts;
 		auto ParseMatAttribLambda = [&]()
 			{
-				auto LoadMatInstLambda = [](const std::string& Str)
-					{
-						FString MatStr = UTF8_TO_TCHAR(Str.c_str());
-						int32 SplitIdx;
-						if (MatStr.FindChar(TCHAR(';'), SplitIdx))
-							MatStr.LeftInline(SplitIdx);
-						UMaterialInterface* LoadedMat = LoadObject<UMaterialInterface>(nullptr, *MatStr, nullptr, LOAD_Quiet | LOAD_NoWarn);
-						return (IsValid(LoadedMat) ? LoadedMat : nullptr);
-					};
-
 				if (Mats.IsEmpty() && MatArrayCounts.IsEmpty())
 				{
-					class FHoudiniAttributeAccessor : public FHoudiniAttribute
-					{
-					public:
-						const TArray<int32>& GetIntValues() const { return IntValues; }
-						const TArray<std::string>& GetStringValues() const { return StringValues; }
-					};
-
-					const TArray<int32>& StrIndices = static_cast<FHoudiniAttributeAccessor*>(MatAttrib)->GetIntValues();
+					const TArray<int32>& StrIndices = static_cast<FHoudiniStringAttributDataAccessor*>(MatAttrib)->GetIntValues();
 					
 					TArray<UMaterialInterface*> UniqueMats;
-					for (const std::string& Str : static_cast<FHoudiniAttributeAccessor*>(MatAttrib)->GetStringValues())
-						UniqueMats.Add(LoadMatInstLambda(Str));
-					Mats.SetNumUninitialized(StrIndices.Num());
-					for (int32 ElemIdx = 0; ElemIdx < StrIndices.Num(); ++ElemIdx)
-						Mats[ElemIdx] = UniqueMats[StrIndices[ElemIdx]];
+					for (const std::string& Str : static_cast<FHoudiniStringAttributDataAccessor*>(MatAttrib)->GetStringValues())
+						UniqueMats.Add(LoadAssetFromHoudiniString<UMaterialInterface>(Str));
+					if (StrIndices.IsEmpty())  // Only one string
+						Mats = UniqueMats;
+					else
+					{
+						Mats.SetNumUninitialized(StrIndices.Num());
+						for (int32 ElemIdx = 0; ElemIdx < StrIndices.Num(); ++ElemIdx)
+							Mats[ElemIdx] = UniqueMats[StrIndices[ElemIdx]];
 
-					if (MatAttrib->GetStorage() == HAPI_STORAGETYPE_STRING_ARRAY)
-						MatArrayCounts = static_cast<FHoudiniArrayAttribute*>(MatAttrib)->Counts;
+						if (MatAttrib->GetStorage() == HAPI_STORAGETYPE_STRING_ARRAY)
+							MatArrayCounts = static_cast<FHoudiniArrayAttribute*>(MatAttrib)->Counts;
+					}
 				}
 			};
+
+#if ENABLE_INSTANCEDSKINNEDMESH_OUTPUT
+		// We need to split ISKMCs by override TransformProvider attribute
+		FHoudiniAttribute* TransformProviderAttrib = nullptr;
+		if (const TSharedPtr<FHoudiniAttribute>* TransformProviderAttribPtr = PropAttribs.FindByPredicate(
+			[](const TSharedPtr<FHoudiniAttribute>& Attrib) { return (Attrib->GetAttributeName() == HOUDINI_PROPERTY_TRANSFORMER_PROVIDER); }))
+			TransformProviderAttrib = TransformProviderAttribPtr->Get();
+
+		if (TransformProviderAttrib)
+		{
+			const HAPI_StorageType& Storage = TransformProviderAttrib->GetStorage();
+			if ((Storage != HAPI_STORAGETYPE_STRING) && (Storage != HAPI_STORAGETYPE_STRING_ARRAY))
+				TransformProviderAttrib = nullptr;
+		}
+
+		TArray<UTransformProviderData*> TransformProviders;
+		auto ParseTransformProviderAttribLambda = [&]()
+			{
+				if (TransformProviders.IsEmpty())
+				{
+					const TArray<int32>& StrIndices = static_cast<FHoudiniStringAttributDataAccessor*>(TransformProviderAttrib)->GetIntValues();
+
+					TArray<UTransformProviderData*> UniqueTPs;
+					for (const std::string& Str : static_cast<FHoudiniStringAttributDataAccessor*>(TransformProviderAttrib)->GetStringValues())
+						UniqueTPs.Add(LoadAssetFromHoudiniString<UTransformProviderData>(Str));
+					if (StrIndices.IsEmpty())  // Only one string
+						TransformProviders = UniqueTPs;
+					else
+					{
+						TransformProviders.SetNumUninitialized((TransformProviderAttrib->GetOwner() == HAPI_ATTROWNER_DETAIL) ? 1 : Part.Info.pointCount);
+						if (TransformProviderAttrib->GetStorage() == HAPI_STORAGETYPE_STRING)
+						{
+							for (int32 ElemIdx = 0; ElemIdx < TransformProviders.Num(); ++ElemIdx)
+								TransformProviders[ElemIdx] = UniqueTPs[StrIndices[ElemIdx]];
+						}
+						else if (TransformProviderAttrib->GetStorage() == HAPI_STORAGETYPE_STRING_ARRAY)
+						{
+							const TArray<int32>& ElemArrayCounts = static_cast<FHoudiniArrayAttribute*>(TransformProviderAttrib)->Counts;
+							for (int32 ElemIdx = 0; ElemIdx < ElemArrayCounts.Num(); ++ElemIdx)
+								TransformProviders[ElemIdx] = (ElemArrayCounts[ElemIdx] <= 0) ? nullptr :
+								UniqueTPs[StrIndices[((ElemIdx <= 0) ? 0 : ElemArrayCounts[ElemIdx - 1])]];
+						}
+					}
+				}
+			};
+#endif
 
 		for (const auto& SplitInstancer : Part.SplitInstancerMap)
 		{
@@ -1194,264 +1260,459 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 				case EHoudiniInstancerOutputMode::HISMC:
 				{
 					const int8& NumCustomFloats = AssetIndices.Key.Key.Value;
-					UStaticMesh* SM = Cast<UStaticMesh>(Instance);
-
-					auto FindOrCreateInstanceComponentLambda = [&](const TArray<int32>& InstPointIndices, const bool& bReverseCull, const TArray<UMaterialInterface*>& OverrideMaterials)
-						{
-							const int32& InstMainPointIdx = InstPointIndices[0];
-
-							if (InstanceType == EHoudiniInstancerOutputMode::Auto && ((InstPointIndices.Num() >= 2) || (NumCustomFloats >= 1)))
-								InstanceType = EHoudiniInstancerOutputMode::ISMC;
-
-							FHoudiniInstancedStaticMeshOutput NewISMOutput;
-							if (FHoudiniInstancedStaticMeshOutput* FoundISMOutput = FHoudiniOutputUtils::FindOutputHolder(OldInstancedStaticMeshOutputs,
-								[&](const FHoudiniInstancedStaticMeshOutput* ISMOutput)
-								{
-									if (ISMOutput->CanReuse(SplitValue, bSplitActor))
-									{
-										if (const UStaticMeshComponent* SMC = ISMOutput->Find(Node))
-										{
-											if ((SMC->GetClass() == UStaticMeshComponent::StaticClass() && InstanceType == EHoudiniInstancerOutputMode::Auto) ||
-												(SMC->GetClass() == UInstancedStaticMeshComponent::StaticClass() && InstanceType == EHoudiniInstancerOutputMode::ISMC) ||
-												(SMC->GetClass() == UHierarchicalInstancedStaticMeshComponent::StaticClass() && InstanceType == EHoudiniInstancerOutputMode::HISMC))
-												return SMC->GetStaticMesh() == SM;
-										}
-									}
-
-									return false;
-								}))
-								NewISMOutput = *FoundISMOutput;
-
-							UStaticMeshComponent* NewSMC = NewISMOutput.CreateOrUpdate(GetNode(), InstanceType, SplitValue, bSplitActor);
-							NewSMC->SetStaticMesh(SM);
-
-							// Set uproperties
-							for (const TSharedPtr<FHoudiniAttribute>& PropAttrib : PropAttribs)
+					if (UStaticMesh* SM = Cast<UStaticMesh>(Instance))
+					{
+						auto FindOrCreateInstanceComponentLambda = [&](const TArray<int32>& InstPointIndices, const bool& bReverseCull, const TArray<UMaterialInterface*>& OverrideMaterials)
 							{
-								const FString& PropertyName = PropAttrib->GetAttributeName();
-								if ((PropertyName == TEXT("InstanceStartCullDistance")) || (PropertyName == TEXT("InstanceEndCullDistance")))
-									continue;
+								const int32& InstMainPointIdx = InstPointIndices[0];
 
-								if (PropertyName == TEXT("Materials"))
+								if (InstanceType == EHoudiniInstancerOutputMode::Auto && ((InstPointIndices.Num() >= 2) || (NumCustomFloats >= 1)))
+									InstanceType = EHoudiniInstancerOutputMode::ISMC;
+
+								TSubclassOf<UStaticMeshComponent> SMCClass = nullptr;
+								switch (InstanceType)
 								{
-									const int32 NumMats = FMath::Min(OverrideMaterials.Num(), NewSMC->GetNumMaterials());
-									for (int32 MatIdx = 0; MatIdx < NumMats; ++MatIdx)
-									{
-										if (OverrideMaterials[MatIdx])
-											NewSMC->SetMaterial(MatIdx, OverrideMaterials[MatIdx]);
-									}
-									continue;
+								case EHoudiniInstancerOutputMode::Auto: SMCClass = UStaticMeshComponent::StaticClass(); break;
+								case EHoudiniInstancerOutputMode::ISMC: SMCClass = UInstancedStaticMeshComponent::StaticClass(); break;
+								case EHoudiniInstancerOutputMode::HISMC: SMCClass = UHierarchicalInstancedStaticMeshComponent::StaticClass(); break;
 								}
 
-								PropAttrib->SetObjectPropertyValues(NewSMC, POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx));
-							}
-
-							if (UInstancedStaticMeshComponent* NewISMC = Cast<UInstancedStaticMeshComponent>(NewSMC))
-							{
-								// Clear Transform
-								if (!NewISMC->GetRelativeTransform().Equals(FTransform::Identity))
-									NewISMC->SetRelativeTransform(FTransform::Identity);
-
-								struct FHoudiniComponentNoCollisionScope
-								{
-									UStaticMeshComponent* Component = nullptr;
-									FName CollisionProfileName;
-									ECollisionEnabled::Type CollisionEnabled = ECollisionEnabled::NoCollision;
-									bool bUseDefaultCollision = false;
-
-									FHoudiniComponentNoCollisionScope(UStaticMeshComponent* InComponent)
+								FHoudiniInstancedMeshOutput NewISMOutput;
+								if (FHoudiniInstancedMeshOutput* FoundISMOutput = FHoudiniOutputUtils::FindOutputHolder(OldInstancedMeshOutputs,
+									[&](const FHoudiniInstancedMeshOutput* ISMOutput)
 									{
-										if (IsValid(InComponent))
+										if (ISMOutput->CanReuse(SplitValue, bSplitActor))
 										{
-											Component = InComponent;
-											CollisionEnabled = Component->GetCollisionEnabled();
-											if (CollisionEnabled != ECollisionEnabled::NoCollision)
+											if (const UMeshComponent* SMC = ISMOutput->Find(Node))
 											{
-												bUseDefaultCollision = Component->bUseDefaultCollision;
-												CollisionProfileName = Component->GetCollisionProfileName();
-												Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+												if (SMC->GetClass() == SMCClass)
+													return Cast<UStaticMeshComponent>(SMC)->GetStaticMesh() == SM;
 											}
 										}
-									}
 
-									~FHoudiniComponentNoCollisionScope()
-									{
-										if (IsValid(Component))
-										{
-											if (CollisionEnabled != ECollisionEnabled::NoCollision)
-											{
-												if (CollisionProfileName != UCollisionProfile::CustomCollisionProfileName)
-													Component->SetCollisionProfileName(CollisionProfileName);
-												else
-													Component->SetCollisionEnabled(CollisionEnabled);
+										return false;
+									}))
+									NewISMOutput = *FoundISMOutput;
 
-												if (bUseDefaultCollision)
-													Component->bUseDefaultCollision = true;
-											}
-										}
-									}
-								};
+								UStaticMeshComponent* NewSMC = Cast<UStaticMeshComponent>(NewISMOutput.CreateOrUpdate(GetNode(), SMCClass, SplitValue, bSplitActor));
+								NewSMC->SetStaticMesh(SM);
+								UInstancedStaticMeshComponent* NewISMC = Cast<UInstancedStaticMeshComponent>(NewSMC);
 
-								{
-#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 4)) || (ENGINE_MAJOR_VERSION > 5)
-									// Disable collision when output HISMC, to have better performance.  // TODO: check out why?
-									FHoudiniComponentNoCollisionScope NoCollisionScope(Cast<UHierarchicalInstancedStaticMeshComponent>(NewISMC));
-#endif
-
-									auto UpdateInstancesLambda = [&](const int32& NumInsts)
-										{
-											if (NumInsts >= 1)
-											{
-												TArray<FTransform> TransformsToUpdate;
-												TransformsToUpdate.Reserve(NumInsts);
-												for (int32 InstIdx = 0; InstIdx < NumInsts; ++InstIdx)
-													TransformsToUpdate.Add(Transforms[InstPointIndices[InstIdx]]);
-												NewISMC->BatchUpdateInstancesTransforms(0, TransformsToUpdate);
-											}
-										};
-
-									const int32 NumOldInsts = NewISMC->GetInstanceCount();
-									const int32 NumNewInsts = InstPointIndices.Num();
-
-									if (NumOldInsts < NumNewInsts)
-									{
-										UpdateInstancesLambda(NumOldInsts);
-
-										TArray<FTransform> TransformsToCreate;
-										TransformsToCreate.Reserve(NumNewInsts - NumOldInsts);
-										for (int32 InstIdx = NumOldInsts; InstIdx < NumNewInsts; ++InstIdx)
-											TransformsToCreate.Add(Transforms[InstPointIndices[InstIdx]]);
-										NewISMC->AddInstances(TransformsToCreate, false);
-									}
-									else if (NumOldInsts == NumNewInsts)
-									{
-										UpdateInstancesLambda(NumNewInsts);
-									}
-									else if (NumOldInsts > NumNewInsts)
-									{
-										TArray<int32> InstIndicesToRemove;
-										InstIndicesToRemove.Reserve(NumOldInsts - NumNewInsts);
-										for (int32 InstIdx = NumOldInsts - 1; InstIdx >= NumNewInsts; --InstIdx)
-											InstIndicesToRemove.Add(InstIdx);
-
-										// Disable collision when remove instances, to have better performance.  // TODO: check out why?
-#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 4)) || (ENGINE_MAJOR_VERSION > 5)
-										FHoudiniComponentNoCollisionScope RemoveNoCollisionScope(NoCollisionScope.Component ? nullptr : NewISMC);  // ensure only once
-#else
-										FHoudiniComponentNoCollisionScope RemoveNoCollisionScope(NewISMC);
-#endif
-
-										if (!InstIndicesToRemove.IsEmpty())
-										{
-											NewISMC->SelectedInstances.Empty();  // Clear selected instance to avoid crash
-											NewISMC->RemoveInstances(InstIndicesToRemove);
-										}
-
-										UpdateInstancesLambda(NumNewInsts);
-									}
-
-									// Set Custom Floats
-									NewISMC->SetNumCustomDataFloats(int32(NumCustomFloats));
-									if (NumCustomFloats >= 1)
-									{
-										for (int32 InstIdx = 0; InstIdx < NumNewInsts; ++InstIdx)
-										{
-											TArray<float> InstCustomFloats;
-											for (int8 CustomFloatIdx = 0; CustomFloatIdx < NumCustomFloats; ++CustomFloatIdx)
-												InstCustomFloats.Add(CustomFloatsData[CustomFloatIdx][POINT_ATTRIB_ENTRY_IDX(CustomFloatAttribInfos[CustomFloatIdx].owner, InstPointIndices[InstIdx])]);
-											NewISMC->SetCustomData(InstIdx, InstCustomFloats);
-										}
-									}
-								}  // EndNoCollisionScope
-
-								// Set CullDistance individually, because they are always being set
+								// Set uproperties
 								for (const TSharedPtr<FHoudiniAttribute>& PropAttrib : PropAttribs)
 								{
 									const FString& PropertyName = PropAttrib->GetAttributeName();
-									if (PropertyName == TEXT("InstanceStartCullDistance"))
+									if (NewISMC && (PropertyName == HOUDINI_PROPERTY_INSTANCE_START_CULL_DISTANCE))
 									{
 										TArray<int32> IntData = PropAttrib->GetIntData(POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx));
 										if (IntData.IsValidIndex(0))
 											NewISMC->InstanceStartCullDistance = IntData[0];
+										continue;
 									}
-									else if (PropertyName == TEXT("InstanceEndCullDistance"))
+									else if (NewISMC && (PropertyName == HOUDINI_PROPERTY_INSTANCE_END_CULL_DISTANCE))
 									{
 										TArray<int32> IntData = PropAttrib->GetIntData(POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx));
 										if (IntData.IsValidIndex(0))
 											NewISMC->InstanceEndCullDistance = IntData[0];
+										continue;
 									}
+
+									if (PropertyName == HOUDINI_PROPERTY_MATERIALS)
+									{
+										const int32 NumMats = FMath::Min(OverrideMaterials.Num(), NewSMC->GetNumMaterials());
+										for (int32 MatIdx = 0; MatIdx < NumMats; ++MatIdx)
+										{
+											if (OverrideMaterials[MatIdx])
+												NewSMC->SetMaterial(MatIdx, OverrideMaterials[MatIdx]);
+										}
+										continue;
+									}
+
+									PropAttrib->SetObjectPropertyValues(NewSMC, POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx));
 								}
-								NewISMC->SetReverseCulling(bReverseCull);
-							}
-							else if (!NewSMC->GetRelativeTransform().Equals(Transforms[InstMainPointIdx]))
-								NewSMC->SetRelativeTransform(Transforms[InstMainPointIdx]);
 
-							SET_SPLIT_ACTOR_UPROPERTIES(NewISMOutput, POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx), false);
+								if (NewISMC)
+								{
+									// Clear Transform
+									if (!NewISMC->GetRelativeTransform().Equals(FTransform::Identity))
+										NewISMC->SetRelativeTransform(FTransform::Identity);
 
-							NewSMC->Modify();
+									struct FHoudiniComponentNoCollisionScope
+									{
+										UStaticMeshComponent* Component = nullptr;
+										FName CollisionProfileName;
+										ECollisionEnabled::Type CollisionEnabled = ECollisionEnabled::NoCollision;
+										bool bUseDefaultCollision = false;
 
-							NewInstancedStaticMeshOutputs.Add(NewISMOutput);
-						};
+										FHoudiniComponentNoCollisionScope(UStaticMeshComponent* InComponent)
+										{
+											if (IsValid(InComponent))
+											{
+												Component = InComponent;
+												CollisionEnabled = Component->GetCollisionEnabled();
+												if (CollisionEnabled != ECollisionEnabled::NoCollision)
+												{
+													bUseDefaultCollision = Component->bUseDefaultCollision;
+													CollisionProfileName = Component->GetCollisionProfileName();
+													Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+												}
+											}
+										}
 
-					if (MatAttrib && (MatAttrib->GetOwner() != HAPI_ATTROWNER_DETAIL))
-					{
-						const int32 NumMatSlots = SM->GetStaticMaterials().Num();
-						ParseMatAttribLambda();
-						if (MatAttrib->GetStorage() == HAPI_STORAGETYPE_STRING)
+										~FHoudiniComponentNoCollisionScope()
+										{
+											if (IsValid(Component))
+											{
+												if (CollisionEnabled != ECollisionEnabled::NoCollision)
+												{
+													if (CollisionProfileName != UCollisionProfile::CustomCollisionProfileName)
+														Component->SetCollisionProfileName(CollisionProfileName);
+													else
+														Component->SetCollisionEnabled(CollisionEnabled);
+
+													if (bUseDefaultCollision)
+														Component->bUseDefaultCollision = true;
+												}
+											}
+										}
+									};
+
+									{
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 4)) || (ENGINE_MAJOR_VERSION > 5)
+										// Disable collision when output HISMC, to have better performance.  // TODO: check out why?
+										FHoudiniComponentNoCollisionScope NoCollisionScope(Cast<UHierarchicalInstancedStaticMeshComponent>(NewISMC));
+#endif
+
+										auto UpdateInstancesLambda = [&](const int32& NumInsts)
+											{
+												if (NumInsts >= 1)
+												{
+													TArray<FTransform> TransformsToUpdate;
+													TransformsToUpdate.Reserve(NumInsts);
+													for (int32 InstIdx = 0; InstIdx < NumInsts; ++InstIdx)
+														TransformsToUpdate.Add(Transforms[InstPointIndices[InstIdx]]);
+													NewISMC->BatchUpdateInstancesTransforms(0, TransformsToUpdate);
+												}
+											};
+
+										const int32 NumOldInsts = NewISMC->GetInstanceCount();
+										const int32 NumNewInsts = InstPointIndices.Num();
+
+										if (NumOldInsts < NumNewInsts)
+										{
+											UpdateInstancesLambda(NumOldInsts);
+
+											TArray<FTransform> TransformsToCreate;
+											TransformsToCreate.Reserve(NumNewInsts - NumOldInsts);
+											for (int32 InstIdx = NumOldInsts; InstIdx < NumNewInsts; ++InstIdx)
+												TransformsToCreate.Add(Transforms[InstPointIndices[InstIdx]]);
+											NewISMC->AddInstances(TransformsToCreate, false);
+										}
+										else if (NumOldInsts == NumNewInsts)
+										{
+											UpdateInstancesLambda(NumNewInsts);
+										}
+										else if (NumOldInsts > NumNewInsts)
+										{
+											TArray<int32> InstIndicesToRemove;
+											InstIndicesToRemove.Reserve(NumOldInsts - NumNewInsts);
+											for (int32 InstIdx = NumOldInsts - 1; InstIdx >= NumNewInsts; --InstIdx)
+												InstIndicesToRemove.Add(InstIdx);
+
+											// Disable collision when remove instances, to have better performance.  // TODO: check out why?
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 4)) || (ENGINE_MAJOR_VERSION > 5)
+											FHoudiniComponentNoCollisionScope RemoveNoCollisionScope(NoCollisionScope.Component ? nullptr : NewISMC);  // ensure only once
+#else
+											FHoudiniComponentNoCollisionScope RemoveNoCollisionScope(NewISMC);
+#endif
+
+											if (!InstIndicesToRemove.IsEmpty())
+											{
+												NewISMC->SelectedInstances.Empty();  // Clear selected instance to avoid crash
+												NewISMC->RemoveInstances(InstIndicesToRemove);
+											}
+
+											UpdateInstancesLambda(NumNewInsts);
+										}
+
+										// Set Custom Floats
+										NewISMC->SetNumCustomDataFloats(int32(NumCustomFloats));
+										if (NumCustomFloats >= 1)
+										{
+											for (int32 InstIdx = 0; InstIdx < NumNewInsts; ++InstIdx)
+											{
+												TArray<float> InstCustomFloats;
+												for (int8 CustomFloatIdx = 0; CustomFloatIdx < NumCustomFloats; ++CustomFloatIdx)
+													InstCustomFloats.Add(CustomFloatsData[CustomFloatIdx][POINT_ATTRIB_ENTRY_IDX(CustomFloatAttribInfos[CustomFloatIdx].owner, InstPointIndices[InstIdx])]);
+												NewISMC->SetCustomData(InstIdx, InstCustomFloats);
+											}
+										}
+									}  // EndNoCollisionScope
+
+									NewISMC->SetReverseCulling(bReverseCull);
+								}
+								else if (!NewSMC->GetRelativeTransform().Equals(Transforms[InstMainPointIdx]))
+									NewSMC->SetRelativeTransform(Transforms[InstMainPointIdx]);
+
+								SET_SPLIT_ACTOR_UPROPERTIES(NewISMOutput, POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx), false);
+
+								NewSMC->Modify();
+
+								NewInstancedMeshOutputs.Add(NewISMOutput);
+							};
+
+						if (MatAttrib && (MatAttrib->GetOwner() != HAPI_ATTROWNER_DETAIL))
 						{
-							TMap<TPair<bool, UMaterialInterface*>, TArray<int32>> MatPointIndicesMap;
-							for (const int32& PointIdx : PointIndices)
+							const int32 NumMatSlots = SM->GetStaticMaterials().Num();
+							ParseMatAttribLambda();
+							if (MatAttrib->GetStorage() == HAPI_STORAGETYPE_STRING)
 							{
-								const FVector InstScale = Transforms[PointIdx].GetScale3D();
-								MatPointIndicesMap.FindOrAdd(TPair<bool, UMaterialInterface*>(
-									bool((int32(InstScale.X < 0.0) + int32(InstScale.Y < 0.0) + int32(InstScale.Z < 0.0)) % 2), Mats[PointIdx])).Add(PointIdx);
+								TMap<TPair<bool, UMaterialInterface*>, TArray<int32>> MatPointIndicesMap;
+								for (const int32& PointIdx : PointIndices)
+								{
+									const FVector InstScale = Transforms[PointIdx].GetScale3D();
+									MatPointIndicesMap.FindOrAdd(TPair<bool, UMaterialInterface*>(
+										bool((int32(InstScale.X < 0.0) + int32(InstScale.Y < 0.0) + int32(InstScale.Z < 0.0)) % 2), Mats[PointIdx])).Add(PointIdx);
+								}
+								for (const auto& MatPointIndices : MatPointIndicesMap)
+									FindOrCreateInstanceComponentLambda(MatPointIndices.Value, MatPointIndices.Key.Key, TArray<UMaterialInterface*>{ MatPointIndices.Key.Value });
 							}
-							for (const auto& MatPointIndices : MatPointIndicesMap)
-								FindOrCreateInstanceComponentLambda(MatPointIndices.Value, MatPointIndices.Key.Key, TArray<UMaterialInterface*>{ MatPointIndices.Key.Value });
+							else
+							{
+								TMap<TPair<bool, TArray<UMaterialInterface*>>, TArray<int32>> MatPointIndicesMap;
+								for (const int32& PointIdx : PointIndices)
+								{
+									const FVector InstScale = Transforms[PointIdx].GetScale3D();
+									TPair<bool, TArray<UMaterialInterface*>> Identifier;
+									Identifier.Key = bool((int32(InstScale.X < 0.0) + int32(InstScale.Y < 0.0) + int32(InstScale.Z < 0.0)) % 2);
+									if (MatArrayCounts.IsEmpty())
+										Identifier.Value.Add(Mats[PointIdx]);
+									else
+									{
+										const int32 StartDataIdx = ((PointIdx <= 0) ? 0 : MatArrayCounts[PointIdx - 1]);
+										Identifier.Value.Append(Mats.GetData() + StartDataIdx, FMath::Min(MatArrayCounts[PointIdx] - StartDataIdx, NumMatSlots));
+									}
+									MatPointIndicesMap.FindOrAdd(Identifier).Add(PointIdx);
+								}
+
+								for (const auto& MatPointIndices : MatPointIndicesMap)
+									FindOrCreateInstanceComponentLambda(MatPointIndices.Value, MatPointIndices.Key.Key, MatPointIndices.Key.Value);
+							}
 						}
 						else
 						{
-							TMap<TPair<bool, TArray<UMaterialInterface*>>, TArray<int32>> MatPointIndicesMap;
+							TArray<int32> PositiveIndices; PositiveIndices.Reserve(PointIndices.Num());  // Most like to be
+							TArray<int32> NegativeIndices;
 							for (const int32& PointIdx : PointIndices)
 							{
 								const FVector InstScale = Transforms[PointIdx].GetScale3D();
-								TPair<bool, TArray<UMaterialInterface*>> Identifier;
-								Identifier.Key = bool((int32(InstScale.X < 0.0) + int32(InstScale.Y < 0.0) + int32(InstScale.Z < 0.0)) % 2);
-								if (MatArrayCounts.IsEmpty())
-									Identifier.Value.Add(Mats[PointIdx]);
+								if ((int32(InstScale.X < 0.0) + int32(InstScale.Y < 0.0) + int32(InstScale.Z < 0.0)) % 2)
+									NegativeIndices.Add(PointIdx);
 								else
-								{
-									const int32 StartDataIdx = ((PointIdx <= 0) ? 0 : MatArrayCounts[PointIdx - 1]);
-									Identifier.Value.Append(Mats.GetData() + StartDataIdx, FMath::Min(MatArrayCounts[PointIdx] - StartDataIdx, NumMatSlots));
-								}
-								MatPointIndicesMap.FindOrAdd(Identifier).Add(PointIdx);
+									PositiveIndices.Add(PointIdx);
 							}
 
-							for (const auto& MatPointIndices : MatPointIndicesMap)
-								FindOrCreateInstanceComponentLambda(MatPointIndices.Value, MatPointIndices.Key.Key, MatPointIndices.Key.Value);
+							if (MatAttrib)  // Must on detail
+								ParseMatAttribLambda();
+
+							if (!PositiveIndices.IsEmpty())
+								FindOrCreateInstanceComponentLambda(PositiveIndices, false, Mats);
+							if (!NegativeIndices.IsEmpty())
+								FindOrCreateInstanceComponentLambda(NegativeIndices, true, Mats);
 						}
 					}
-					else
+#if ENABLE_INSTANCEDSKINNEDMESH_OUTPUT
+					else if (USkeletalMesh* SKM = Cast<USkeletalMesh>(Instance))
 					{
-						TArray<int32> PositiveIndices; PositiveIndices.Reserve(PointIndices.Num());  // Most like to be
-						TArray<int32> NegativeIndices;
-						for (const int32& PointIdx : PointIndices)
-						{
-							const FVector InstScale = Transforms[PointIdx].GetScale3D();
-							if ((int32(InstScale.X < 0.0) + int32(InstScale.Y < 0.0) + int32(InstScale.Z < 0.0)) % 2)
-								NegativeIndices.Add(PointIdx);
-							else
-								PositiveIndices.Add(PointIdx);
-						}
+						auto FindOrCreateISKMCLambda = [&](const TArray<int32>& InstPointIndices, const TArray<UMaterialInterface*>& OverrideMaterials, UTransformProviderData* TransformProvider)
+							{
+								const int32& InstMainPointIdx = InstPointIndices[0];
+								FHoudiniInstancedMeshOutput NewISKMOutput;
+								if (FHoudiniInstancedMeshOutput* FoundISKMOutput = FHoudiniOutputUtils::FindOutputHolder(OldInstancedMeshOutputs,
+									[&](const FHoudiniInstancedMeshOutput* ISMOutput)
+									{
+										if (ISMOutput->CanReuse(SplitValue, bSplitActor))
+										{
+											if (const UMeshComponent* MC = ISMOutput->Find(Node))
+												return (MC->GetClass() == UInstancedSkinnedMeshComponent::StaticClass()) &&
+													(Cast<UInstancedSkinnedMeshComponent>(MC)->GetSkinnedAsset() == SKM);
+										}
 
-						if (MatAttrib)  // Must on detail
+										return false;
+									}))
+									NewISKMOutput = *FoundISKMOutput;
+
+								UInstancedSkinnedMeshComponent* NewISKMC = Cast<UInstancedSkinnedMeshComponent>(
+									NewISKMOutput.CreateOrUpdate(GetNode(), UInstancedSkinnedMeshComponent::StaticClass(), SplitValue, bSplitActor));
+								if (NewISKMC->GetInstanceCount() >= 1)
+									NewISKMC->ClearInstances();
+								else
+									NewISKMC->SetCollisionProfileName(TEXT("NoCollision"));  // Disable collision by default
+								NewISKMC->SetSkinnedAsset(SKM);
+
+								// Set uproperties
+								int32 InstanceStartCullDistance = 0;
+								int32 InstanceEndCullDistance = 0;
+								NewISKMC->GetCullDistances(InstanceStartCullDistance, InstanceEndCullDistance);
+								for (const TSharedPtr<FHoudiniAttribute>& PropAttrib : PropAttribs)
+								{
+									const FString& PropertyName = PropAttrib->GetAttributeName();
+									if (PropertyName == HOUDINI_PROPERTY_MATERIALS)
+									{
+										const int32 NumMats = FMath::Min(OverrideMaterials.Num(), NewISKMC->GetNumMaterials());
+										for (int32 MatIdx = 0; MatIdx < NumMats; ++MatIdx)
+										{
+											if (OverrideMaterials[MatIdx])
+												NewISKMC->SetMaterial(MatIdx, OverrideMaterials[MatIdx]);
+										}
+										continue;
+									}
+									else if (PropertyName == HOUDINI_PROPERTY_TRANSFORMER_PROVIDER)
+									{
+										NewISKMC->SetTransformProvider(TransformProvider);
+										continue;
+									}
+									if (PropertyName == HOUDINI_PROPERTY_INSTANCE_START_CULL_DISTANCE)
+									{
+										TArray<int32> IntData = PropAttrib->GetIntData(POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx));
+										if (IntData.IsValidIndex(0))
+											InstanceStartCullDistance = IntData[0];
+										continue;
+									}
+									else if (PropertyName == HOUDINI_PROPERTY_INSTANCE_END_CULL_DISTANCE)
+									{
+										TArray<int32> IntData = PropAttrib->GetIntData(POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx));
+										if (IntData.IsValidIndex(0))
+											InstanceEndCullDistance = IntData[0];
+										continue;
+									}
+
+									PropAttrib->SetObjectPropertyValues(NewISKMC, POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx));
+								}
+								NewISKMC->SetCullDistances(InstanceStartCullDistance, InstanceEndCullDistance);
+
+								// Clear Transform
+								if (!NewISKMC->GetRelativeTransform().Equals(FTransform::Identity))
+									NewISKMC->SetRelativeTransform(FTransform::Identity);
+
+
+								TArray<FTransform> InstTransforms;
+								InstTransforms.Reserve(InstPointIndices.Num());
+								TArray<int32> InstAnimIdcs;
+								InstAnimIdcs.Reserve(InstPointIndices.Num());
+								for (const int32& PtIdx : InstPointIndices)
+								{
+									InstTransforms.Add(Transforms[PtIdx]);
+									InstAnimIdcs.Add(-1);
+								}
+
+								TArray<FPrimitiveInstanceId> InstIds = NewISKMC->AddInstances(InstTransforms, InstAnimIdcs, NumCustomFloats >= 1);
+								// Set Custom Floats
+								NewISKMC->SetNumCustomDataFloats(int32(NumCustomFloats));
+								if (NumCustomFloats >= 1)
+								{
+									for (int32 InstIdx = 0; InstIdx < InstPointIndices.Num(); ++InstIdx)
+									{
+										TArray<float> InstCustomFloats;
+										for (int8 CustomFloatIdx = 0; CustomFloatIdx < NumCustomFloats; ++CustomFloatIdx)
+											InstCustomFloats.Add(CustomFloatsData[CustomFloatIdx][POINT_ATTRIB_ENTRY_IDX(CustomFloatAttribInfos[CustomFloatIdx].owner, InstPointIndices[InstIdx])]);
+										NewISKMC->SetCustomData(InstIds[InstIdx], InstCustomFloats);
+									}
+								}
+								SET_SPLIT_ACTOR_UPROPERTIES(NewISKMOutput, POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), InstMainPointIdx), false);
+
+								NewISKMC->MarkRenderStateDirty();
+								NewISKMC->UpdateBounds();
+								NewISKMC->OptimizeInstanceData();
+								//NewISKMC->Modify();
+
+								NewInstancedMeshOutputs.Add(NewISKMOutput);
+							};
+
+						if (MatAttrib)
 							ParseMatAttribLambda();
+						if (TransformProviderAttrib)
+							ParseTransformProviderAttribLambda();
 
-						if (!PositiveIndices.IsEmpty())
-							FindOrCreateInstanceComponentLambda(PositiveIndices, false, Mats);
-						if (!NegativeIndices.IsEmpty())
-							FindOrCreateInstanceComponentLambda(NegativeIndices, true, Mats);
+						if (MatAttrib && (MatAttrib->GetOwner() != HAPI_ATTROWNER_DETAIL))
+						{
+							const int32 NumMatSlots = SKM->GetMaterials().Num();
+							if (TransformProviderAttrib && (TransformProviderAttrib->GetOwner() != HAPI_ATTROWNER_DETAIL))
+							{
+								if (MatAttrib->GetStorage() == HAPI_STORAGETYPE_STRING)
+								{
+									TMap<TPair<UMaterialInterface*, UTransformProviderData*>, TArray<int32>> MatPointIndicesMap;
+									for (const int32& PointIdx : PointIndices)
+										MatPointIndicesMap.FindOrAdd(TPair<UMaterialInterface*, UTransformProviderData*>(
+											Mats[PointIdx], TransformProviders[PointIdx])).Add(PointIdx);
+									for (const auto& MatPointIndices : MatPointIndicesMap)
+										FindOrCreateISKMCLambda(MatPointIndices.Value, TArray<UMaterialInterface*>{ MatPointIndices.Key.Key }, MatPointIndices.Key.Value);
+								}
+								else
+								{
+									TMap<TPair<TArray<UMaterialInterface*>, UTransformProviderData*>, TArray<int32>> MatPointIndicesMap;
+									for (const int32& PointIdx : PointIndices)
+									{
+										if (MatArrayCounts.IsEmpty())
+											MatPointIndicesMap.FindOrAdd(TPair<TArray<UMaterialInterface*>, UTransformProviderData*>(
+												TArray<UMaterialInterface*>{ Mats[PointIdx] }, TransformProviders[PointIdx])).Add(PointIdx);
+										else
+										{
+											const int32 StartDataIdx = ((PointIdx <= 0) ? 0 : MatArrayCounts[PointIdx - 1]);
+											MatPointIndicesMap.FindOrAdd(TPair<TArray<UMaterialInterface*>, UTransformProviderData*>(
+												TArray<UMaterialInterface*>(Mats.GetData() + StartDataIdx, FMath::Min(MatArrayCounts[PointIdx] - StartDataIdx, NumMatSlots)), TransformProviders[PointIdx])).Add(PointIdx);
+										}
+									}
+
+									for (const auto& MatPointIndices : MatPointIndicesMap)
+										FindOrCreateISKMCLambda(MatPointIndices.Value, MatPointIndices.Key.Key, MatPointIndices.Key.Value);
+								}
+							}
+							else
+							{
+								UTransformProviderData* TransformProvider = TransformProviders.IsValidIndex(0) ? TransformProviders[0] : nullptr;
+								if (MatAttrib->GetStorage() == HAPI_STORAGETYPE_STRING)
+								{
+									TMap<UMaterialInterface*, TArray<int32>> MatPointIndicesMap;
+									for (const int32& PointIdx : PointIndices)
+										MatPointIndicesMap.FindOrAdd(Mats[PointIdx]).Add(PointIdx);
+									for (const auto& MatPointIndices : MatPointIndicesMap)
+										FindOrCreateISKMCLambda(MatPointIndices.Value, TArray<UMaterialInterface*>{ MatPointIndices.Key }, TransformProvider);
+								}
+								else
+								{
+									TMap<TArray<UMaterialInterface*>, TArray<int32>> MatPointIndicesMap;
+									for (const int32& PointIdx : PointIndices)
+									{
+										if (MatArrayCounts.IsEmpty())
+											MatPointIndicesMap.FindOrAdd(TArray<UMaterialInterface*>{ Mats[PointIdx] }).Add(PointIdx);
+										else
+										{
+											const int32 StartDataIdx = ((PointIdx <= 0) ? 0 : MatArrayCounts[PointIdx - 1]);
+											MatPointIndicesMap.FindOrAdd(TArray<UMaterialInterface*>(Mats.GetData() + StartDataIdx, FMath::Min(MatArrayCounts[PointIdx] - StartDataIdx, NumMatSlots))).Add(PointIdx);
+										}
+									}
+
+									for (const auto& MatPointIndices : MatPointIndicesMap)
+										FindOrCreateISKMCLambda(MatPointIndices.Value, MatPointIndices.Key, TransformProvider);
+								}
+							}
+						}
+						else if (TransformProviderAttrib && (TransformProviderAttrib->GetOwner() != HAPI_ATTROWNER_DETAIL))
+						{
+							TMap<UTransformProviderData*, TArray<int32>> TPPointIndicesMap;
+							for (const int32& PointIdx : PointIndices)
+								TPPointIndicesMap.FindOrAdd(TransformProviders[PointIdx]).Add(PointIdx);
+							for (const auto& TPPointIndices : TPPointIndicesMap)
+								FindOrCreateISKMCLambda(TPPointIndices.Value, TArray<UMaterialInterface*>{}, TPPointIndices.Key);
+						}
+						else
+							FindOrCreateISKMCLambda(PointIndices, Mats, TransformProviders.IsValidIndex(0) ? TransformProviders[0] : nullptr);
+#if WAIT_SKELETAL_MESH_COMPILATION
+						FAssetCompilingManager::Get().FinishCompilationForObjects({ SKM });
+#endif
 					}
+#endif
 				}
 				break;
 				case EHoudiniInstancerOutputMode::Foliage:
@@ -1542,11 +1803,21 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 						OldInstancedActorOutputs.RemoveNode(MostMatchedListNode);
 					}
 					
-					if (NewInstancedActorOutput.Update(Node, SplitValue, Instance, InstanceActorMap.FindOrAdd(Instance),
+					FTransform SplitTransform = Node->GetActorTransform();
+					if (ActorLocationAttrib)
+					{
+						const TArray<float> FloatData = ActorLocationAttrib->GetFloatData(PointIndices[0]);
+						if (FloatData.Num() >= 3)
+							SplitTransform.SetLocation(FVector(double(FloatData[0])* POSITION_SCALE_TO_UNREAL, double(FloatData[2])* POSITION_SCALE_TO_UNREAL, double(FloatData[1])* POSITION_SCALE_TO_UNREAL));
+					}
+					if (NewInstancedActorOutput.Update(Node, SplitTransform, SplitValue, Instance, InstanceActorMap.FindOrAdd(Instance),
 						PointIndices, Transforms, [&](AActor* Actor, const int32& PointIdx)
 							{
 								for (const TSharedPtr<FHoudiniAttribute>& PropAttrib : PropAttribs)
-									PropAttrib->SetObjectPropertyValues(Actor, POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), PointIdx));
+								{
+									if (!PropAttrib->GetAttributeName().Equals(HOUDINI_PROPERTY_ACTOR_LOCATION, ESearchCase::IgnoreCase))  // We should not translate actors here
+										PropAttrib->SetObjectPropertyValues(Actor, POINT_ATTRIB_ENTRY_IDX(PropAttrib->GetOwner(), PointIdx));
+								}
 
 								USceneComponent* RootComponent = Actor->GetRootComponent();
 								if (RootComponent && RootComponent->GetClass() != USceneComponent::StaticClass())  // We should also set RootComponent properties, like PointLight. however, if is SceneComponent, then we need NOT to set
@@ -1610,9 +1881,9 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 
 	// -------- Post-processing --------
 	// Destroy old outputs, like this->Destroy()
-	for (const FHoudiniInstancedStaticMeshOutput* OldISMOutput : OldInstancedStaticMeshOutputs)
+	for (const FHoudiniInstancedMeshOutput* OldISMOutput : OldInstancedMeshOutputs)
 		OldISMOutput->Destroy(Node);
-	OldInstancedStaticMeshOutputs.Empty();
+	OldInstancedMeshOutputs.Empty();
 
 	for (const FHoudiniInstancedComponentOutput* OldInstancedComponentOutput : OldInstancedComponentOutputs)
 		OldInstancedComponentOutput->Destroy(Node);
@@ -1653,7 +1924,7 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 #endif
 
 	// Update output holders
-	InstancedStaticMeshOutputs = NewInstancedStaticMeshOutputs;
+	InstancedMeshOutputs = NewInstancedMeshOutputs;
 	InstancedComponentOutputs = NewInstancedComponentOutputs;
 	InstancedActorOutputs = NewInstancedActorOutputs;
 	FoliageOutputs = NewFoliageOutputs;
@@ -1664,7 +1935,7 @@ bool UHoudiniOutputInstancer::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArr
 
 void UHoudiniOutputInstancer::Destroy() const
 {
-	for (const FHoudiniInstancedStaticMeshOutput& OldISMOutput : InstancedStaticMeshOutputs)
+	for (const FHoudiniInstancedMeshOutput& OldISMOutput : InstancedMeshOutputs)
 		OldISMOutput.Destroy(GetNode());
 
 	for (const FHoudiniInstancedComponentOutput& OldInstancedComponentOutput : InstancedComponentOutputs)
@@ -1682,7 +1953,7 @@ void UHoudiniOutputInstancer::Destroy() const
 
 void UHoudiniOutputInstancer::CollectActorSplitValues(TSet<FString>& InOutSplitValues, TSet<FString>& InOutEditableSplitValues) const
 {
-	for (const FHoudiniInstancedStaticMeshOutput& ISMOutput : InstancedStaticMeshOutputs)
+	for (const FHoudiniInstancedMeshOutput& ISMOutput : InstancedMeshOutputs)
 	{
 		if (ISMOutput.IsSplitActor())
 			InOutSplitValues.FindOrAdd(ISMOutput.GetSplitValue());
@@ -1694,7 +1965,7 @@ void UHoudiniOutputInstancer::CollectActorSplitValues(TSet<FString>& InOutSplitV
 			InOutSplitValues.FindOrAdd(ICOutput.GetSplitValue());
 	}
 
-	// We neet NOT to add InstancedActorOutputs, because they did NOT attached to any SplitActors
+	// We need NOT to add InstancedActorOutputs, because they did NOT attach to any SplitActors
 
 	for (const FHoudiniFoliageOutput& FoliageOutput : FoliageOutputs)
 	{

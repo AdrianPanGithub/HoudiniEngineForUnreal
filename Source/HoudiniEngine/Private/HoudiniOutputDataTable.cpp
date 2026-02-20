@@ -88,7 +88,7 @@ static UUserDefinedStruct* FindOrCreateUserDefinedStructAsset(const FString& Ass
 	FString ObjectPath = FPackageName::ExportTextPathToObjectPath(AssetPath);
 	FString PackagePath;
 	FString AssetName;
-	if (!ObjectPath.Split(TEXT("."), &PackagePath, &AssetName))
+	if (!ObjectPath.Split(TEXT("."), &PackagePath, &AssetName, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
 	{
 		PackagePath = ObjectPath;
 		AssetName = FPaths::GetBaseFilename(ObjectPath);

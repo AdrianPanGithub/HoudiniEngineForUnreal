@@ -99,9 +99,8 @@ TSharedPtr<SWidget> FHoudiniEditableGeometryVisualizer::GenerateContextMenu() co
 
 bool FHoudiniEditableGeometryVisualizer::GetWidgetLocation(const FEditorViewportClient* ViewportClient, FVector& OutLocation) const
 {
-	if (const UHoudiniEditableGeometry* EditGeo = GetSelectedGeometry<UHoudiniEditableGeometry>())
+	if (GetSelectedGeometry<UHoudiniEditableGeometry>())
 	{
-		Pivot = EditGeo->GetSelectionPivot();
 		OutLocation = Pivot.GetLocation();
 		return true;
 	}
@@ -110,11 +109,15 @@ bool FHoudiniEditableGeometryVisualizer::GetWidgetLocation(const FEditorViewport
 
 bool FHoudiniEditableGeometryVisualizer::GetCustomInputCoordinateSystem(const FEditorViewportClient* ViewportClient, FMatrix& OutMatrix) const
 {
-	if (Pivot.GetRotation() != FQuat::Identity)
+	if (const UHoudiniEditableGeometry* EditGeo = GetSelectedGeometry<UHoudiniEditableGeometry>())
 	{
-		OutMatrix = FMatrix::Identity;
-		OutMatrix *= FRotationMatrix(Pivot.Rotator());
-		return true;
+		Pivot = EditGeo->GetSelectionPivot();
+		if (Pivot.GetRotation() != FQuat::Identity)
+		{
+			OutMatrix = FMatrix::Identity;
+			OutMatrix *= FRotationMatrix(Pivot.Rotator());
+			return true;
+		}
 	}
 
 	return false;

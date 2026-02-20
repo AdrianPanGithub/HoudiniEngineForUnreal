@@ -72,8 +72,8 @@ bool FHoudiniAttribute::SetObjectPropertyValues(UObject* Object, const int32& In
 	// -------- Set some special properties ---------
 	if (UPrimitiveComponent* PC = Cast<UPrimitiveComponent>(Object))
 	{
-		if (Name.Equals(TEXT("CollisionProfileName"), ESearchCase::IgnoreCase) ||
-			Name.Equals(TEXT("CollisionPresets"), ESearchCase::IgnoreCase))
+		if (Name.Equals(HOUDINI_PROPERTY_COLLISION_PROFILE_NAME, ESearchCase::IgnoreCase) ||
+			Name.Equals(HOUDINI_PROPERTY_COLLISION_PRESETS, ESearchCase::IgnoreCase))
 		{
 			if (IsRestrictString())
 			{
@@ -98,7 +98,7 @@ bool FHoudiniAttribute::SetObjectPropertyValues(UObject* Object, const int32& In
 
 			return true;
 		}
-		else if (Name.Equals(TEXT("Materials"), ESearchCase::IgnoreCase))
+		else if (Name.Equals(HOUDINI_PROPERTY_MATERIALS, ESearchCase::IgnoreCase))
 		{
 			if (IsRestrictString())
 			{
@@ -144,7 +144,18 @@ bool FHoudiniAttribute::SetObjectPropertyValues(UObject* Object, const int32& In
 	}
 	else if (AActor* Actor = Cast<AActor>(Object))
 	{
-		if (Name.Equals(TEXT("RuntimeGrid"), ESearchCase::IgnoreCase))
+		if (Name.Equals(HOUDINI_PROPERTY_ACTOR_LOCATION, ESearchCase::IgnoreCase))
+		{
+			const TArray<float> FloatData = GetFloatData(Index);
+			if (FloatData.Num() >= 3)
+			{
+				const FVector NewLocation(double(FloatData[0]) * POSITION_SCALE_TO_UNREAL, double(FloatData[2]) * POSITION_SCALE_TO_UNREAL, double(FloatData[1]) * POSITION_SCALE_TO_UNREAL);
+				if (NewLocation != Actor->GetActorLocation())
+					Actor->SetActorLocation(NewLocation);
+			}
+			return true;
+		}
+		else if (Name.Equals(TEXT("RuntimeGrid"), ESearchCase::IgnoreCase))
 		{
 			if (!IsRestrictString())
 				return true;

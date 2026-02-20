@@ -28,7 +28,9 @@ UHoudiniInputHolder* FHoudiniStaticMeshInputBuilder::CreateOrUpdate(UHoudiniInpu
 
 bool FHoudiniStaticMeshInputBuilder::GetInfo(const UObject* Asset, FString& OutInfoStr)
 {
-	return UHoudiniInputStaticMesh::AppendObjectInfo(Asset, OutInfoStr);
+	if (const UStaticMesh* SM = Cast<UStaticMesh>(Asset))
+		return UHoudiniInputStaticMesh::AppendBoundInfo(SM, OutInfoStr);
+	return false;
 }
 
 
@@ -671,10 +673,9 @@ bool UHoudiniInputStaticMesh::HapiImportRenderData(const UStaticMesh* SM, const 
 	return SHMGeoInput.HapiUpload(InOutSHMInputNodeId, SHM);
 }
 
-bool UHoudiniInputStaticMesh::AppendObjectInfo(const UObject* InSM, FString& InOutInfoStr)
+bool UHoudiniInputStaticMesh::AppendBoundInfo(const UStaticMesh* SM, FString& InOutInfoStr)
 {
-	const UStaticMesh* SM = Cast<UStaticMesh>(InSM);
-	if (IsValid(SM))
+	if (SM)
 	{
 		const FBox BoundingBox = SM->GetBounds().GetBox();
 		InOutInfoStr += FString::Printf(TEXT("bounds:%s,%s,%s,%s,%s,%s"), PRINT_HOUDINI_FLOAT(BoundingBox.Min.X), PRINT_HOUDINI_FLOAT(BoundingBox.Max.X),
@@ -794,16 +795,14 @@ bool FHoudiniFoliageTypeInputBuilder::GetInfo(const UObject* Asset, FString& Out
 {
 	if (const UFoliageType_InstancedStaticMesh* FT = Cast<UFoliageType_InstancedStaticMesh>(Asset))
 	{
-		UStaticMesh* SM = FT->GetStaticMesh();
+		const UStaticMesh* SM = FT->GetStaticMesh();
 		if (IsValid(SM))
 		{
 			OutInfoStr = FHoudiniEngineUtils::GetAssetReference(SM) + TEXT(";");
-			return UHoudiniInputStaticMesh::AppendObjectInfo(SM, OutInfoStr);
+			return UHoudiniInputStaticMesh::AppendBoundInfo(SM, OutInfoStr);
 		}
-
 		return true;
 	}
-
 	return false;
 }
 
@@ -931,7 +930,20 @@ UHoudiniInputHolder* FHoudiniSkeletalMeshInputBuilder::CreateOrUpdate(UHoudiniIn
 	return CreateOrUpdateHolder<USkeletalMesh, UHoudiniInputSkeletalMesh>(Input, Asset, OldHolder);
 }
 
-bool UHoudiniInputSkeletalMesh::HapiImportMeshDescription(const USkeletalMesh* SM, const USkeletalMeshComponent* SMC,
+bool FHoudiniSkeletalMeshInputBuilder::GetInfo(const UObject* Asset, FString& OutInfoStr)
+{
+	if (const USkeletalMesh* SKM = Cast<USkeletalMesh>(Asset))
+	{
+		const FBox BoundingBox = SKM->GetBounds().GetBox();
+		OutInfoStr = FString::Printf(TEXT("bounds:%s,%s,%s,%s,%s,%s"), PRINT_HOUDINI_FLOAT(BoundingBox.Min.X), PRINT_HOUDINI_FLOAT(BoundingBox.Max.X),
+			PRINT_HOUDINI_FLOAT(BoundingBox.Min.Z), PRINT_HOUDINI_FLOAT(BoundingBox.Max.Z), PRINT_HOUDINI_FLOAT(BoundingBox.Min.Y), PRINT_HOUDINI_FLOAT(BoundingBox.Max.Y));
+
+		return true;
+	}
+	return false;
+}
+
+bool UHoudiniInputSkeletalMesh::HapiImportMeshDescription(const USkeletalMesh* SM, const USkinnedMeshComponent* SMC,
 	const FHoudiniInputSettings& Settings, const int32& GeoNodeId, int32& InOutSHMInputNodeId, size_t& InOutHandle)
 {
 #if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 4)) || (ENGINE_MAJOR_VERSION > 5)
@@ -1258,7 +1270,7 @@ bool UHoudiniInputSkeletalMesh::HapiImportMeshDescription(const USkeletalMesh* S
 #endif
 }
 
-bool UHoudiniInputSkeletalMesh::HapiImportRenderData(const USkeletalMesh* SM, const USkeletalMeshComponent* SMC,
+bool UHoudiniInputSkeletalMesh::HapiImportRenderData(const USkeletalMesh* SM, const USkinnedMeshComponent* SMC,
 	const FHoudiniInputSettings& Settings, const int32& GeoNodeId, int32& InOutSHMInputNodeId, size_t& InOutHandle)
 {
 	TArray<TPair<int32, const FSkeletalMeshLODRenderData*>> IdxMeshes;
@@ -1710,7 +1722,7 @@ bool UHoudiniInputSkeletalMesh::HapiImportSkeleton(const USkeletalMesh* SKM,
 	return SHMGeoInput.HapiUpload(InOutSHMInputNodeId, SHM);
 }
 
-bool UHoudiniInputSkeletalMesh::HapiImport(const USkeletalMesh* SM, const USkeletalMeshComponent* SMC,
+bool UHoudiniInputSkeletalMesh::HapiImport(const USkeletalMesh* SM, const USkinnedMeshComponent* SMC,
 	const FHoudiniInputSettings& Settings, const int32& GeoNodeId,
 	int32& InOutMeshInputNodeId, size_t& InOutMeshHandle, int32& InOutSkeletonInputNodeId, size_t& InOutSkeletonHandle)
 {

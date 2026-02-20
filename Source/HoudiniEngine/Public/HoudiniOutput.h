@@ -55,6 +55,8 @@ public:
 
 	virtual bool HapiRetrieve(AHoudiniNode* Node, const FString& OutputName, const HAPI_GeoInfo& GeoInfo, const TArray<HAPI_PartInfo>& PartInfos) { return true; }  // Will be called when bOutShouldHoldByOutput == false
 
+	virtual void PostProcess(const AHoudiniNode* Node, const bool& bForce) {}
+
 
 	virtual ~IHoudiniOutputBuilder() {}
 };

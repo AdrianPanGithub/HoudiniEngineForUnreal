@@ -1627,7 +1627,7 @@ void FHoudiniParameterDetails::ParseAsset(IDetailCategoryBuilder& CategoryBuilde
 	FAssetData AssetData = IAssetRegistry::GetChecked().GetAssetByObjectPath(CurrParm->GetAssetPath());
 	if (!AssetData.IsValid() && AllowClasses.Num() == 1)
 		AssetData.AssetClassPath = AllowClasses[0]->GetPathName();  // Set Default class thumbnail
-	TSharedPtr<FAssetThumbnail> AssetThumbnail = MakeShareable(new FAssetThumbnail(AssetData, 64, 64, AssetThumbnailPool));
+	TSharedPtr<FAssetThumbnail> AssetThumbnail = MakeShareable(new FAssetThumbnail(AssetData, 48, 48, AssetThumbnailPool));
 	
 	TSharedPtr<STextBlock> AssetNameBlock;
 	TSharedRef<SComboButton> AssetComboButton = SNew(SComboButton)
@@ -1828,7 +1828,7 @@ void FHoudiniParameterDetails::ParseAssetChoice(IDetailCategoryBuilder& Category
 
 	TSharedPtr<FAssetThumbnailPool> AssetThumbnailPool = CategoryBuilder.GetParentLayout().GetThumbnailPool();
 	FAssetData AssetData = IAssetRegistry::GetChecked().GetAssetByObjectPath(CurrParm->GetAssetPath());
-	TSharedPtr<FAssetThumbnail> AssetThumbnail = MakeShareable(new FAssetThumbnail(AssetData, 64, 64, AssetThumbnailPool));
+	TSharedPtr<FAssetThumbnail> AssetThumbnail = MakeShareable(new FAssetThumbnail(AssetData, 48, 48, AssetThumbnailPool));
 
 	TSharedPtr<STextBlock> AssetNameBlock;
 	TSharedRef<SComboButton> AssetComboButton = SNew(SComboButton)

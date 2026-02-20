@@ -8,7 +8,7 @@
 #include "HoudiniCurvesComponent.h"
 
 
-const FName UHoudiniAttributeParameterHolder::DetailsName("HoudiniAttrbuteParameterDetails");
+const FName UHoudiniAttributeParameterHolder::DetailsName("HoudiniAttributeParameterDetails");
 
 UHoudiniAttributeParameterHolder* UHoudiniAttributeParameterHolder::AttribParmHolderInstance = nullptr;
 

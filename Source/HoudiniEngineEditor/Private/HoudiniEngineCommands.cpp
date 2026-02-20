@@ -14,7 +14,6 @@
 #include "ISettingsModule.h"
 
 #include "HAPI/HAPI_Version.h"
-#include "HoudiniApi.h"
 #include "HoudiniEngine.h"
 #include "HoudiniEngineCommon.h"
 #include "HoudiniEngineSettings.h"
@@ -22,7 +21,7 @@
 #include "HoudiniEngineStyle.h"
 
 
-#define LOCTEXT_NAMESPACE HOUDINI_LOCTEXT_NAMESPACE 
+#define LOCTEXT_NAMESPACE HOUDINI_LOCTEXT_NAMESPACE
 
 FHoudiniEngineCommands::FHoudiniEngineCommands()
 	: TCommands<FHoudiniEngineCommands>(TEXT("HoudiniEngine"), NSLOCTEXT("Contexts", "HoudiniEngine", "Houdini Engine Plugin"), NAME_None, FHoudiniEngineStyle::GetStyleSetName())
@@ -267,7 +266,7 @@ void FHoudiniEngineCommands::SyncCleanupCookFolder()
 			AssetDatas.RemoveAt(AssetIdx);
 	}
 
-	// As collision mesh always referred by a staticmesh, we should delete static mesh first, then delete collision meshes
+	// As collision mesh always referred by a StaticMesh, we should delete StaticMesh first, then delete collision meshes
 	int32 NumDeletedAssets = DeleteUnreferencedAssets(AssetRegistry, AssetDatas, CleanupTask, 1.0f / AssetDatas.Num());
 	NumDeletedAssets += DeleteUnreferencedAssets(AssetRegistry, CollisionMeshAssetDatas, CleanupTask, 1.0f / AssetDatas.Num());
 

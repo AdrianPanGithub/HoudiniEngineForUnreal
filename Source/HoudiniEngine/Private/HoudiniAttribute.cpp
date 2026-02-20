@@ -280,7 +280,7 @@ bool FHoudiniArrayAttribute::HapiRetrieveData(const int32& NodeId, const int32& 
 			else
 				HAPI_SESSION_FAIL_RETURN(FHoudiniApi::GetAttributeStringArrayData(FHoudiniEngine::Get().GetSession(), NodeId, PartId,
 					AttribName, &AttribInfo, IntValues.GetData(), AttribInfo.totalArrayElements, ArrayCounts.GetData(), 0, AttribInfo.count))
-			HOUDINI_FAIL_RETURN(HapiRetrieveUniqueStrings(IntValues, StringValues));  // TODO: check Houdini 21.0 still make all strings unique?
+			HOUDINI_FAIL_RETURN(HapiRetrieveUniqueStrings(IntValues, StringValues));
 		}
 	}
 	break;

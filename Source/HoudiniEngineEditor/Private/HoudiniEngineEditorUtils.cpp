@@ -4,8 +4,6 @@
 
 #include "HAL/PlatformApplicationMisc.h"
 #include "Engine/Selection.h"
-#include "EngineUtils.h"
-#include "Landscape.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
 #include "LevelEditor.h"
@@ -14,10 +12,10 @@
 #include "PropertyCustomizationHelpers.h"
 #include "ContentBrowserModule.h"
 
-#include "HoudiniEngineCommon.h"
+#include "HoudiniEngine.h"
 #include "HoudiniNode.h"
+#include "HoudiniOutput.h"
 #include "HoudiniEditableGeometry.h"
-#include "HoudiniOutputs.h"
 
 #include "HoudiniEngineEditor.h"
 #include "HoudiniAttributeParameterHolder.h"
@@ -34,7 +32,7 @@ void FHoudiniEngineEditorUtils::RefreshNodeEditor(const AHoudiniNode* Node)
 	Selection->GetSelectedObjects(SelectedActors);
 	if (SelectedActors.Contains(Node))
 	{
-		FHoudiniEditableGeometryEditingScope EditingScope;  // As reselect actors will deactiavte editing comp vis, so we need this scope to recover it
+		FHoudiniEditableGeometryEditingScope EditingScope;  // As reselect actors will deactivate editing comp vis, so we need this scope to recover it
 
 		GEditor->SelectNone(false, false, false);
 		for (AActor* NextSelected : SelectedActors)
@@ -69,6 +67,7 @@ void FHoudiniEngineEditorUtils::RefreshNodeEditor(const AHoudiniNode* Node)
 			DetailsView->ForceRefresh();
 	}
 	
+	bool bOutputPostProcessed = false;
 	// Refresh parameter attribute panel
 	UHoudiniAttributeParameterHolder* AttribParmHolder = UHoudiniAttributeParameterHolder::Get();
 	if (TSharedPtr<IDetailsView> DetailsView = AttribParmHolder->DetailsView.Pin())
@@ -91,29 +90,18 @@ void FHoudiniEngineEditorUtils::RefreshNodeEditor(const AHoudiniNode* Node)
 
 		if (AttribParmHolder->IsRightClickPanelOpen())
 		{
-			// Force to update landscape layer content, so that landscape could be redraw when attrib panel is open
-			const double LandscapeUpdateStartTime = FPlatformTime::Seconds();
-			for (TActorIterator<ALandscape> LandscapeIter(Node->GetWorld()); LandscapeIter; ++LandscapeIter)
-			{
-				ALandscape* Landscape = *LandscapeIter;
-#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 7)) || (ENGINE_MAJOR_VERSION > 5)
-				if (IsValid(Landscape) && !Landscape->IsUpToDate())
-					Landscape->ForceUpdateLayersContent();  // If NO landscape tile changed, then will NOT update anything
-#else
-				if (IsValid(Landscape) && Landscape->HasLayersContent() && !Landscape->IsUpToDate())
-					Landscape->ForceUpdateLayersContent(false);  // If NO landscape tile changed, then will NOT update anything
-#endif
-			}
-			const double LandscapeUpdateDuringTime = FPlatformTime::Seconds() - LandscapeUpdateStartTime;
-			if (LandscapeUpdateDuringTime > 0.001)
-				UE_LOG(LogHoudiniEngine, Log, TEXT("Update Landscapes Layer Content: %f (s)"), LandscapeUpdateDuringTime);
+			for (const TSharedPtr<IHoudiniOutputBuilder>& OutputBuilder : FHoudiniEngine::Get().GetOutputBuilders())
+				OutputBuilder->PostProcess(Node, true);
 
-			// If attrib panel is open, then we should wait static mesh build finish then redraw viewport
-			FHoudiniStaticMeshOutput::FinishCompilation(true);
+			bOutputPostProcessed = true;
 		}
 	}
 
-	FHoudiniStaticMeshOutput::FinishCompilation(false);
+	if (!bOutputPostProcessed)
+	{
+		for (const TSharedPtr<IHoudiniOutputBuilder>& OutputBuilder : FHoudiniEngine::Get().GetOutputBuilders())
+			OutputBuilder->PostProcess(Node, false);
+	}
 
 	// Allow viewport to show new landscape layers and meshes
 	GEditor->RedrawLevelEditingViewports(true);

@@ -343,6 +343,34 @@ bool FHoudiniEngineSetupKineFXInput::HapiConnectInput(const int32& SettingsNodeI
 	return true;
 }
 
+// -------- he_setup_kinefx_inputs --------
+bool FHoudiniEngineSetupKineFXInputs::HapiCreateNode(const int32& ParentNodeId, const FString& NodeLabel, int32& OutNodeId)
+{
+	HAPI_CREATE_SOP_NODE(he_setup_kinefx_inputs);
+}
+
+bool FHoudiniEngineSetupKineFXInputs::HapiConnectInputs(const int32& SettingsNodeId, const int32& MeshNodeId, const int32& SkeletonNodeId, const int32& InstancerNodeId)
+{
+	HAPI_SESSION_FAIL_RETURN(FHoudiniApi::ConnectNodeInput(FHoudiniEngine::Get().GetSession(),
+		SettingsNodeId, 0, MeshNodeId, 0));
+
+	HAPI_SESSION_FAIL_RETURN(FHoudiniApi::ConnectNodeInput(FHoudiniEngine::Get().GetSession(),
+		SettingsNodeId, 1, SkeletonNodeId, 0));
+
+	HAPI_SESSION_FAIL_RETURN(FHoudiniApi::ConnectNodeInput(FHoudiniEngine::Get().GetSession(),
+		SettingsNodeId, 2, InstancerNodeId, 0));
+
+	return true;
+}
+
+bool FHoudiniEngineSetupKineFXInputs::HapiSetTargetPointGroup(const int32& SettingsNodeId, const FString& GroupStr)
+{
+	HAPI_SESSION_FAIL_RETURN(FHoudiniApi::SetParmStringValue(FHoudiniEngine::Get().GetSession(),
+		SettingsNodeId, TCHAR_TO_UTF8(*GroupStr), 0, 0));
+
+	return true;
+}
+
 // -------- he_setup_heightfield_input --------
 bool FHoudiniEngineSetupHeightfieldInput::HapiCreateNode(const int32& ParentNodeId, const FString& NodeLabel, int32& OutNodeId)
 {
@@ -495,7 +523,7 @@ bool FHoudiniSopCopyToPoints::HapiInitialize(const int32& SettingsNodeId)
 	// Set: pack, origin, viewportlod, transform, useimplicitn, resettargetattribs, targetattribs
 	static const int ParmIntValues[7] = { 1, 0, 0, 1, 1, 1, 1 };
 	HAPI_SESSION_FAIL_RETURN(FHoudiniApi::SetParmIntValues(FHoudiniEngine::Get().GetSession(), SettingsNodeId,
-		ParmIntValues, 2, 6));  // TODO: From Houdini 20.5.584, multi-parm cannot set with the buttom.
+		ParmIntValues, 2, 6));  // TODO: From Houdini 20.5.584, multi-parm cannot set after the button parm.
 
 	return true;
 }
@@ -511,7 +539,7 @@ bool FHoudiniSopCopyToPoints::HapiConnectInputs(const int32& SettingsNodeId, con
 	return true;
 }
 
-bool FHoudiniSopCopyToPoints::HapiSetSourcePointGroup(const int32& SettingsNodeId, const FString& GroupStr)
+bool FHoudiniSopCopyToPoints::HapiSetTargetPointGroup(const int32& SettingsNodeId, const FString& GroupStr)
 {
 	HAPI_SESSION_FAIL_RETURN(FHoudiniApi::SetParmStringValue(FHoudiniEngine::Get().GetSession(),
 		SettingsNodeId, TCHAR_TO_UTF8(*GroupStr), 2, 0));

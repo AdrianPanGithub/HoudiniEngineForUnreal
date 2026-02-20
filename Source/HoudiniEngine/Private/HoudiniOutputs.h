@@ -29,9 +29,6 @@ public:
 protected:
 	mutable TWeakObjectPtr<UStaticMeshComponent> Component;
 
-	static IConsoleVariable* MeshDistanceFieldCVar;
-	static bool GShouldRecoverMeshDistanceField;
-
 public:
 	UStaticMeshComponent* Find(const AHoudiniNode* Node) const;
 
@@ -40,10 +37,6 @@ public:
 	void Destroy(const AHoudiniNode* Node) const;  // Will also delete the StaticMesh asset
 
 	FORCEINLINE bool IsInstanced() const { return ComponentName.IsNone(); }
-
-
-	HOUDINIENGINE_API static void OnStaticMeshBuild();  // Will Temporarily disable MeshDistanceField building
-	HOUDINIENGINE_API static void FinishCompilation(const bool& bForce);
 };
 
 USTRUCT()
@@ -109,10 +102,18 @@ public:
 
 class FHoudiniMeshOutputBuilder : public IHoudiniOutputBuilder
 {
+protected:
+	static IConsoleVariable* MeshDistanceFieldCVar;
+	static bool GShouldRecoverMeshDistanceField;
+
 public:
 	virtual bool HapiIsPartValid(const int32& NodeId, const HAPI_PartInfo& PartInfo, bool& bOutIsValid, bool& bOutShouldHoldByOutput) override;
 
 	virtual TSubclassOf<UHoudiniOutput> GetClass() const override { return UHoudiniOutputMesh::StaticClass(); }
+
+	virtual void PostProcess(const AHoudiniNode* Node, const bool& bForce) override;
+
+	static void OnStaticMeshBuild();  // Will Temporarily disable MeshDistanceField building
 };
 
 class FHoudiniSkeletalMeshOutputBuilder : public IHoudiniOutputBuilder
@@ -124,30 +125,18 @@ public:
 };
 
 
-enum class EHoudiniInstancerOutputMode : int8
-{
-	Auto = 0,  // Depend on instance count, When just a single point without custom floats
-	ISMC,  // Force to generate InstancedStaticMeshComponent
-	HISMC,  // Force to generate HierarchicalInstancedStaticMeshComponent
-	Components, // From USceneComponent classes, such as Blueprint, PointLightComponent etc.
-	Actors,  // From Blueprint, DecalMaterial, PointLight etc.
-	Foliage,
-	GeometryCollection
-};
-
 USTRUCT()
-struct FHoudiniInstancedStaticMeshOutput : public FHoudiniComponentOutput
+struct FHoudiniInstancedMeshOutput : public FHoudiniComponentOutput
 {
 	GENERATED_BODY()
 
 protected:
-	mutable TWeakObjectPtr<UStaticMeshComponent> Component;
+	mutable TWeakObjectPtr<UMeshComponent> Component;
 
 public:
-	UStaticMeshComponent* Find(const AHoudiniNode* Node) const;
+	UMeshComponent* Find(const AHoudiniNode* Node) const;
 
-	UStaticMeshComponent* CreateOrUpdate(AHoudiniNode* Node,
-		const EHoudiniInstancerOutputMode& InstancedType, const FString& InSplitValue, const bool& bSplitToActors);
+	UMeshComponent* CreateOrUpdate(AHoudiniNode* Node, const TSubclassOf<UMeshComponent>& Class, const FString& InSplitValue, const bool& bSplitToActors);
 
 	void Destroy(const AHoudiniNode* Node) const;
 };
@@ -169,7 +158,7 @@ public:
 
 	int32 GetMatchScore(const UObject* Instance, const int32& NumInsts) const;  // Smaller is better, Minus means not matched
 
-	bool Update(const AHoudiniNode* Node, const FString& InSplitValue, UObject* Instance, AActor*& InOutRefActor,
+	bool Update(const AHoudiniNode* Node, const FTransform& SplitTransform, const FString& InSplitValue, UObject* Instance, AActor*& InOutRefActor,
 		const TArray<int32>& PointIndices, const TArray<FTransform>& Transforms, TFunctionRef<void(AActor*, const int32& ElemIdx)> PostFunc, const bool& bCustomFolderPath);
 
 	void TransformActors(const FMatrix& DeltaXform) const;
@@ -279,7 +268,7 @@ class UHoudiniOutputInstancer : public UHoudiniOutput
 
 protected:
 	UPROPERTY()
-	TArray<FHoudiniInstancedStaticMeshOutput> InstancedStaticMeshOutputs;
+	TArray<FHoudiniInstancedMeshOutput> InstancedMeshOutputs;
 
 	UPROPERTY()
 	TArray<FHoudiniInstancedComponentOutput> InstancedComponentOutputs;
@@ -421,6 +410,8 @@ public:
 	virtual TSubclassOf<UHoudiniOutput> GetClass() const override { return UHoudiniOutputLandscape::StaticClass(); }
 
 	virtual bool HapiRetrieve(AHoudiniNode* Node, const FString& OutputName, const HAPI_GeoInfo& GeoInfo, const TArray<HAPI_PartInfo>& PartInfos) override;
+
+	virtual void PostProcess(const AHoudiniNode* Node, const bool& bForce) override;
 };
 
 

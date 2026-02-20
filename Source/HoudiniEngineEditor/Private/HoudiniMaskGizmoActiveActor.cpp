@@ -235,7 +235,7 @@ void AHoudiniMaskGizmoActiveActor::OnMaskChanged(const bool& bIsPendingDestroy)
 	else
 	{
 		if (MaskInput.IsValid() && (MaskInput->GetMaskType() == EHoudiniMaskType::Byte) &&
-			MaskInput->FindByteLayerIndex(ByteValue) < 0)  // Maybe this painting ByteValue has been removed, so brush decal need be deactivate
+			(MaskInput->FindByteLayerIndex(ByteValue) < 0))  // Maybe this painting ByteValue has been removed, so brush decal need be deactivate
 		{
 			DeactivateBrushDisplay();
 			ByteValue = 0;

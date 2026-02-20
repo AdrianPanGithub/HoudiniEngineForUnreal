@@ -88,10 +88,10 @@ UStaticMeshComponent* FHoudiniStaticMeshOutput::Commit(AHoudiniNode* Node, const
 }
 
 
-IConsoleVariable* FHoudiniStaticMeshOutput::MeshDistanceFieldCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.GenerateMeshDistanceFields"));
-bool FHoudiniStaticMeshOutput::GShouldRecoverMeshDistanceField = false;
+IConsoleVariable* FHoudiniMeshOutputBuilder::MeshDistanceFieldCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.GenerateMeshDistanceFields"));
+bool FHoudiniMeshOutputBuilder::GShouldRecoverMeshDistanceField = false;
 
-void FHoudiniStaticMeshOutput::OnStaticMeshBuild()
+void FHoudiniMeshOutputBuilder::OnStaticMeshBuild()
 {
 	if (GShouldRecoverMeshDistanceField)
 		return;
@@ -106,7 +106,7 @@ void FHoudiniStaticMeshOutput::OnStaticMeshBuild()
 	GShouldRecoverMeshDistanceField = true;
 }
 
-void FHoudiniStaticMeshOutput::FinishCompilation(const bool& bForce)
+void FHoudiniMeshOutputBuilder::PostProcess(const AHoudiniNode* Node, const bool& bForce)
 {
 	if (bForce || GShouldRecoverMeshDistanceField)
 	{
@@ -451,9 +451,9 @@ bool UHoudiniOutputMesh::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArray<HA
 
 	static const auto GetMeshOutputModeLambda = [](const FUtf8StringView& AttribValue) -> int8
 		{
-			if (AttribValue.StartsWith("dynamic") || AttribValue.StartsWith("dm"))
+			if (AttribValue.StartsWith("dynamic") || AttribValue.StartsWith("dm") || AttribValue.StartsWith("proced"))
 				return HAPI_UNREAL_OUTPUT_MESH_TYPE_DYNAMICMESH;
-			else if (AttribValue.StartsWith("houdini") || AttribValue.StartsWith("hm"))
+			else if (AttribValue.StartsWith("houdini") || AttribValue.StartsWith("hm") || AttribValue.StartsWith("proxy"))
 				return HAPI_UNREAL_OUTPUT_MESH_TYPE_HOUDINIMESH;
 			return HAPI_UNREAL_OUTPUT_MESH_TYPE_STATICMESH;
 		};
@@ -1107,7 +1107,7 @@ bool UHoudiniOutputMesh::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArray<HA
 						FString CollisionStaticMeshPath;
 						if (!ObjectPathSHs.IsEmpty())
 						{
-							// use this trangle's s@unreal_object_path
+							// use this triangle's s@unreal_object_path
 							const int32 ObjectPathDataIdx = MeshAttributeEntryIdx(ObjectPathOwner, CollisionTriangleIdx, HAPI_ATTROWNER_VERTEX, Vertices);
 							CollisionStaticMeshPath = SHObjectPathMap[ObjectPathSHs[ObjectPathDataIdx]];
 						}
@@ -1270,7 +1270,7 @@ bool UHoudiniOutputMesh::HapiUpdate(const HAPI_GeoInfo& GeoInfo, const TArray<HA
 						SET_OBJECT_UPROPERTIES(BodySetup, MeshAttributeEntryIdx(PropAttribOwner, MainTriangleIdx, HAPI_ATTROWNER_PRIM, Vertices));
 					}
 
-					FHoudiniStaticMeshOutput::OnStaticMeshBuild();
+					FHoudiniMeshOutputBuilder::OnStaticMeshBuild();
 
 					SM->Build(true);
 
@@ -2592,6 +2592,25 @@ bool FHoudiniSkeletalMeshOutputBuilder::HapiRetrieve(AHoudiniNode* Node, const F
 			if (IsValid(PA))
 				PA->SetPreviewMesh(SM);
 
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 7)) || (ENGINE_MAJOR_VERSION > 5)
+			{  // Nanite enabled
+				const HAPI_AttributeOwner NaniteEnableOwner = FHoudiniEngineUtils::QueryAttributeOwner(AttribNames, PartInfo.attributeCounts, HAPI_ATTRIB_UNREAL_NANITE_ENABLED);
+				if (NaniteEnableOwner != HAPI_ATTROWNER_INVALID)
+				{
+					HAPI_SESSION_FAIL_RETURN(FHoudiniApi::GetAttributeInfo(FHoudiniEngine::Get().GetSession(), NodeId, PartId,
+						HAPI_ATTRIB_UNREAL_NANITE_ENABLED, NaniteEnableOwner, &AttribInfo));
+					if (AttribInfo.exists && !FHoudiniEngineUtils::IsArray(AttribInfo.storage) &&
+						(FHoudiniEngineUtils::ConvertStorageType(AttribInfo.storage) == EHoudiniStorageType::Int))
+					{
+						int8 bNaniteEnabled = 0;
+						AttribInfo.tupleSize = 1;  // The tupleSize should be 1 when used for enum
+						HAPI_SESSION_FAIL_RETURN(FHoudiniApi::GetAttributeInt8Data(FHoudiniEngine::Get().GetSession(), NodeId, PartId,
+							HAPI_ATTRIB_UNREAL_NANITE_ENABLED, &AttribInfo, -1, &bNaniteEnabled, 0, 1));
+						SM->NaniteSettings.bEnabled = bool(bNaniteEnabled);
+					}
+				}
+			}
+#endif
 			SET_OBJECT_UPROPERTIES(SM, 0);
 
 			SM->CalculateInvRefMatrices();

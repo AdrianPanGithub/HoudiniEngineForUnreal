@@ -32,6 +32,7 @@ struct HHoudiniPrimVisProxy : public HComponentVisProxy
 	int32 PrimIdx;
 
 	virtual bool AlwaysAllowsTranslucentPrimitives() const override { return true; }
+	virtual EMouseCursor::Type GetMouseCursor() override { return EMouseCursor::Default; }
 };
 
 class HOUDINIENGINEEDITOR_API FHoudiniEditableGeometryVisualizer : public FComponentVisualizer

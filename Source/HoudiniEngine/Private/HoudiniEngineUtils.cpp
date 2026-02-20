@@ -4,7 +4,6 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
-#include "IAssetTools.h"
 
 #include "HoudiniEngineCommon.h"
 #include "HoudiniEngine.h"
@@ -28,11 +27,10 @@ bool FHoudiniEngineUtils::HapiConvertStringHandle(const HAPI_StringHandle& InSH,
         return true;
     }
 
-    TArray<char> NameBuffer;
-    NameBuffer.SetNumUninitialized(StringLength + 1);
-    HAPI_SESSION_FAIL_RETURN(FHoudiniApi::GetString(FHoudiniEngine::Get().GetSession(), InSH, NameBuffer.GetData(), StringLength));
-    NameBuffer.Last() = '\0';
-    OutString = FString(UTF8_TO_TCHAR(NameBuffer.GetData()));  // Different from std::string
+    TArray<char> Buffer;
+    Buffer.SetNumUninitialized(StringLength);
+    HAPI_SESSION_FAIL_RETURN(FHoudiniApi::GetString(FHoudiniEngine::Get().GetSession(), InSH, Buffer.GetData(), StringLength));
+    OutString = FString(UTF8_TO_TCHAR(Buffer.GetData()));  // Different from std::string
 
     return true;
 }
@@ -54,11 +52,28 @@ bool FHoudiniEngineUtils::HapiConvertStringHandle(const HAPI_StringHandle& InSH,
         return true;
     }
 
-    TArray<char> NameBuffer;
-    NameBuffer.SetNumUninitialized(StringLength + 1);
-    HAPI_SESSION_FAIL_RETURN(FHoudiniApi::GetString(FHoudiniEngine::Get().GetSession(), InSH, NameBuffer.GetData(), StringLength));
-    NameBuffer.Last() = '\0';
-    OutString = NameBuffer.GetData();  // Different from FString
+    TArray<char> Buffer;
+    Buffer.SetNumUninitialized(StringLength);
+    HAPI_SESSION_FAIL_RETURN(FHoudiniApi::GetString(FHoudiniEngine::Get().GetSession(), InSH, Buffer.GetData(), StringLength));
+    OutString = Buffer.GetData();  // Different from FString
+
+    return true;
+}
+
+bool FHoudiniEngineUtils::HapiGetStringHandles(const TArray<HAPI_StringHandle>& InSHs, TArray<char>& Buffer)
+{
+    int32 BufferSize = 0;
+    HAPI_Result Result = FHoudiniApi::GetStringBatchSize(FHoudiniEngine::Get().GetSession(), InSHs.GetData(), InSHs.Num(), &BufferSize);
+    if (HAPI_RESULT_SUCCESS != Result)
+        return !(HAPI_SESSION_INVALID_RESULT(Result));
+
+    if (BufferSize <= 0)
+        return true;
+
+    Buffer.SetNumUninitialized(BufferSize);
+    Result = FHoudiniApi::GetStringBatch(FHoudiniEngine::Get().GetSession(), Buffer.GetData(), BufferSize);
+    if (HAPI_RESULT_SUCCESS != Result)
+        return !(HAPI_SESSION_INVALID_RESULT(Result));
 
     return true;
 }
@@ -79,6 +94,9 @@ bool FHoudiniEngineUtils::HapiConvertStringHandles(const TArray<HAPI_StringHandl
         UniqueSHs = SHSet.Array();
     }
 
+    if (UniqueSHs.IsEmpty())
+        return true;
+
     int32 BufferSize = 0;
     HAPI_Result Result = FHoudiniApi::GetStringBatchSize(FHoudiniEngine::Get().GetSession(), UniqueSHs.GetData(), UniqueSHs.Num(), &BufferSize);
     if (HAPI_RESULT_SUCCESS != Result)
@@ -88,8 +106,8 @@ bool FHoudiniEngineUtils::HapiConvertStringHandles(const TArray<HAPI_StringHandl
         return true;
 
     TArray<char> Buffer;
-    Buffer.SetNumZeroed(BufferSize);
-    Result = FHoudiniApi::GetStringBatch(FHoudiniEngine::Get().GetSession(), &Buffer[0], BufferSize);
+    Buffer.SetNumUninitialized(BufferSize);
+    Result = FHoudiniApi::GetStringBatch(FHoudiniEngine::Get().GetSession(), Buffer.GetData(), BufferSize);
     if (HAPI_RESULT_SUCCESS != Result)
         return !(HAPI_SESSION_INVALID_RESULT(Result));
 
@@ -137,6 +155,9 @@ bool FHoudiniEngineUtils::HapiConvertStringHandles(const TArray<HAPI_StringHandl
         UniqueSHs = SHSet.Array();
     }
 
+    if (UniqueSHs.IsEmpty())
+        return true;
+
     int32 BufferSize = 0;
     HAPI_Result Result = FHoudiniApi::GetStringBatchSize(FHoudiniEngine::Get().GetSession(), UniqueSHs.GetData(), UniqueSHs.Num(), &BufferSize);
     if (HAPI_RESULT_SUCCESS != Result)
@@ -146,8 +167,8 @@ bool FHoudiniEngineUtils::HapiConvertStringHandles(const TArray<HAPI_StringHandl
         return true;
 
     TArray<char> Buffer;
-    Buffer.SetNumZeroed(BufferSize);
-    Result = FHoudiniApi::GetStringBatch(FHoudiniEngine::Get().GetSession(), &Buffer[0], BufferSize);
+    Buffer.SetNumUninitialized(BufferSize);
+    Result = FHoudiniApi::GetStringBatch(FHoudiniEngine::Get().GetSession(), Buffer.GetData(), BufferSize);
     if (HAPI_RESULT_SUCCESS != Result)
         return !(HAPI_SESSION_INVALID_RESULT(Result));
 
@@ -180,17 +201,15 @@ bool FHoudiniEngineUtils::HapiConvertStringHandles(const TArray<HAPI_StringHandl
     return true;
 }
 
-bool FHoudiniEngineUtils::HapiConvertUniqueStringHandles(const TArray<HAPI_StringHandle>& InSHs, TArray<FString>& OutStrings)
+bool FHoudiniEngineUtils::HapiConvertUniqueStringHandles(const TArray<HAPI_StringHandle>& UniqueSHs, TArray<FString>& OutStrings)
 {
-    OutStrings.SetNum(InSHs.Num());
+    OutStrings.SetNum(UniqueSHs.Num());
 
-    if (InSHs.IsEmpty())
+    if (UniqueSHs.IsEmpty())
         return true;
-    else if (InSHs.Num() == 1)
-        return HapiConvertStringHandle(InSHs[0], OutStrings[0]);
+    else if (UniqueSHs.Num() == 1)
+        return HapiConvertStringHandle(UniqueSHs[0], OutStrings[0]);
 
-    const TArray<HAPI_StringHandle>& UniqueSHs = InSHs;
-    
     int32 BufferSize = 0;
     HAPI_Result Result = FHoudiniApi::GetStringBatchSize(FHoudiniEngine::Get().GetSession(), UniqueSHs.GetData(), UniqueSHs.Num(), &BufferSize);
     if (HAPI_RESULT_SUCCESS != Result)
@@ -200,8 +219,8 @@ bool FHoudiniEngineUtils::HapiConvertUniqueStringHandles(const TArray<HAPI_Strin
         return true;
 
     TArray<char> Buffer;
-    Buffer.SetNumZeroed(BufferSize);
-    Result = FHoudiniApi::GetStringBatch(FHoudiniEngine::Get().GetSession(), &Buffer[0], BufferSize);
+    Buffer.SetNumUninitialized(BufferSize);
+    Result = FHoudiniApi::GetStringBatch(FHoudiniEngine::Get().GetSession(), Buffer.GetData(), BufferSize);
     if (HAPI_RESULT_SUCCESS != Result)
         return !(HAPI_SESSION_INVALID_RESULT(Result));
 
@@ -219,16 +238,14 @@ bool FHoudiniEngineUtils::HapiConvertUniqueStringHandles(const TArray<HAPI_Strin
     return true;
 }
 
-bool FHoudiniEngineUtils::HapiConvertUniqueStringHandles(const TArray<HAPI_StringHandle>& InSHs, TArray<std::string>& OutStrings)
+bool FHoudiniEngineUtils::HapiConvertUniqueStringHandles(const TArray<HAPI_StringHandle>& UniqueSHs, TArray<std::string>& OutStrings)
 {
-    OutStrings.SetNum(InSHs.Num());
+    OutStrings.SetNum(UniqueSHs.Num());
 
-    if (InSHs.IsEmpty())
+    if (UniqueSHs.IsEmpty())
         return true;
-    else if (InSHs.Num() == 1)
-        return HapiConvertStringHandle(InSHs[0], OutStrings[0]);
-
-    const TArray<HAPI_StringHandle>& UniqueSHs = InSHs;
+    else if (UniqueSHs.Num() == 1)
+        return HapiConvertStringHandle(UniqueSHs[0], OutStrings[0]);
 
     int32 BufferSize = 0;
     HAPI_Result Result = FHoudiniApi::GetStringBatchSize(FHoudiniEngine::Get().GetSession(), UniqueSHs.GetData(), UniqueSHs.Num(), &BufferSize);
@@ -239,8 +256,8 @@ bool FHoudiniEngineUtils::HapiConvertUniqueStringHandles(const TArray<HAPI_Strin
         return true;
 
     TArray<char> Buffer;
-    Buffer.SetNumZeroed(BufferSize);
-    Result = FHoudiniApi::GetStringBatch(FHoudiniEngine::Get().GetSession(), &Buffer[0], BufferSize);
+    Buffer.SetNumUninitialized(BufferSize);
+    Result = FHoudiniApi::GetStringBatch(FHoudiniEngine::Get().GetSession(), Buffer.GetData(), BufferSize);
     if (HAPI_RESULT_SUCCESS != Result)
         return !(HAPI_SESSION_INVALID_RESULT(Result));
 
@@ -266,10 +283,9 @@ bool FHoudiniEngineUtils::HapiGetStatusString(const HAPI_StatusType& StatusType,
         StatusType, StatusVerbosity, &StatusBufferLength));
 
     TArray<char> StatusStringBuffer;
-    StatusStringBuffer.SetNumZeroed(StatusBufferLength);
+    StatusStringBuffer.SetNumZeroed(StatusBufferLength + 1);
     HAPI_SESSION_FAIL_RETURN(FHoudiniApi::GetStatusString(FHoudiniEngine::Get().GetSession(),
         StatusType, StatusStringBuffer.GetData(), StatusBufferLength));
-    StatusStringBuffer.Add('\0');
 
     OutStatusString = StatusStringBuffer.GetData();
 
@@ -662,40 +678,30 @@ UMaterial* FHoudiniEngineUtils::GetVertexColorMaterial(const bool& bGetTransluce
 
 FString FHoudiniEngineUtils::GetPackagePath(const FString& AssetPath)
 {
-    FString ObjectPath;
-    FString AssetInfo;
-    if (AssetPath.Split(TEXT(";"), &ObjectPath, &AssetInfo))  // See UHoudiniParameterAsset
-        ObjectPath = FPackageName::ExportTextPathToObjectPath(ObjectPath);
-    else
-        ObjectPath = FPackageName::ExportTextPathToObjectPath(AssetPath);
+    int32 SplitIdx;
+    const FString ObjectPath = FPackageName::ExportTextPathToObjectPath(
+        AssetPath.FindChar(TCHAR(';'), SplitIdx) ? AssetPath.Left(SplitIdx) : AssetPath);  // See UHoudiniParameterAsset
 
-    FString PackagePath;
-    FString AssetName;
-    if (ObjectPath.Split(TEXT("."), &PackagePath, &AssetName))
-        return PackagePath;
-
-    return ObjectPath;
+    return ObjectPath.FindLastChar(TCHAR('.'), SplitIdx) ? ObjectPath.Left(SplitIdx) : ObjectPath;
 }
 
-UObject* FHoudiniEngineUtils::FindOrCreateAsset(const UClass* AssetClass, const FString& RawAssetPath, bool* bOutFound)
+UObject* FHoudiniEngineUtils::FindOrCreateAsset(const UClass* AssetClass, const FString& AssetPath, bool* bOutFound)
 {
     if (bOutFound)
         *bOutFound = true;
 
-    FString AssetPath;
-    FString AssetInfo;
-    if (!RawAssetPath.Split(TEXT(";"), &AssetPath, &AssetInfo))  // See UHoudiniParameterAsset
-        AssetPath = RawAssetPath;
+    int32 SplitIdx;
+    const FString ObjectPath = FPackageName::ExportTextPathToObjectPath(
+        AssetPath.FindChar(TCHAR(';'), SplitIdx) ? AssetPath.Left(SplitIdx) : AssetPath);  // See UHoudiniParameterAsset
 
-    UObject* TargetAsset = LoadObject<UObject>(nullptr, *AssetPath, nullptr, LOAD_Quiet | LOAD_NoWarn);
-    
+    UObject* TargetAsset = LoadObject<UObject>(nullptr, *ObjectPath, nullptr, LOAD_Quiet | LOAD_NoWarn);
     if (IsValid(TargetAsset))
     {
         if (TargetAsset->GetClass() == AssetClass)
             return TargetAsset;
         else
         {
-            UE_LOG(LogHoudiniEngine, Warning, TEXT("%s: Replace %s to a new %s"), *AssetPath, *TargetAsset->GetClass()->GetName(), *AssetClass->GetName());
+            UE_LOG(LogHoudiniEngine, Warning, TEXT("%s: Replace %s to a new %s"), *ObjectPath, *TargetAsset->GetClass()->GetName(), *AssetClass->GetName());
             TargetAsset->ClearFlags(RF_Standalone);
             TargetAsset->MarkAsGarbage();
             CollectGarbage(RF_NoFlags, true);
@@ -705,10 +711,9 @@ UObject* FHoudiniEngineUtils::FindOrCreateAsset(const UClass* AssetClass, const 
     if (bOutFound)
         *bOutFound = false;
 
-    FString ObjectPath = FPackageName::ExportTextPathToObjectPath(AssetPath);
     FString PackagePath;
     FString AssetName;
-    if (!ObjectPath.Split(TEXT("."), &PackagePath, &AssetName))
+    if (!ObjectPath.Split(TEXT("."), &PackagePath, &AssetName, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
     {
         PackagePath = ObjectPath;
         AssetName = FPaths::GetBaseFilename(ObjectPath);
@@ -722,28 +727,27 @@ UObject* FHoudiniEngineUtils::FindOrCreateAsset(const UClass* AssetClass, const 
     return NewAsset;
 }
 
-UObject* FHoudiniEngineUtils::CreateAsset(const UClass* AssetClass, const FString& RawAssetPath)
+UObject* FHoudiniEngineUtils::CreateAsset(const UClass* AssetClass, const FString& AssetPath)
 {
-    FString AssetPath;
-    FString AssetInfo;
-    if (!RawAssetPath.Split(TEXT(";"), &AssetPath, &AssetInfo))  // See UHoudiniParameterAsset
-        AssetPath = RawAssetPath;
+    int32 SplitIdx;
+    const FString ObjectPath = FPackageName::ExportTextPathToObjectPath(
+        AssetPath.FindChar(TCHAR(';'), SplitIdx) ? AssetPath.Left(SplitIdx) : AssetPath);  // See UHoudiniParameterAsset
 
-    if (UObject* TargetAsset = LoadObject<UObject>(nullptr, *AssetPath, nullptr, LOAD_Quiet | LOAD_NoWarn))
+    UObject* TargetAsset = LoadObject<UObject>(nullptr, *ObjectPath, nullptr, LOAD_Quiet | LOAD_NoWarn);
+    if (IsValid(TargetAsset))
     {
         if (TargetAsset->GetClass() != AssetClass)
         {
-            UE_LOG(LogHoudiniEngine, Warning, TEXT("%s: Replace %s to a new %s"), *AssetPath, *TargetAsset->GetClass()->GetName(), *AssetClass->GetName());
+            UE_LOG(LogHoudiniEngine, Warning, TEXT("%s: Replace %s to a new %s"), *ObjectPath, *TargetAsset->GetClass()->GetName(), *AssetClass->GetName());
             TargetAsset->ClearFlags(RF_Standalone);
             TargetAsset->MarkAsGarbage();
             CollectGarbage(RF_NoFlags, true);
         }
     }
 
-    FString ObjectPath = FPackageName::ExportTextPathToObjectPath(AssetPath);
     FString PackagePath;
     FString AssetName;
-    if (!ObjectPath.Split(TEXT("."), &PackagePath, &AssetName))
+    if (!ObjectPath.Split(TEXT("."), &PackagePath, &AssetName, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
     {
         PackagePath = ObjectPath;
         AssetName = FPaths::GetBaseFilename(ObjectPath);

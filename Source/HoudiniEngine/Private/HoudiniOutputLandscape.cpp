@@ -3,6 +3,7 @@
 #include "HoudiniOutputs.h"
 #include "HoudiniOutputUtils.h"
 
+#include "EngineUtils.h"
 #include "Landscape.h"
 #include "LandscapeStreamingProxy.h"
 #include "LandscapeEdit.h"
@@ -1705,6 +1706,29 @@ void FHoudiniLandscapeOutput::Destroy() const
 		LandscapeProxyHolder.Destroy();
 
 	FHoudiniEngine::Get().DestroyActorByName(LandscapeName);
+}
+
+void FHoudiniLandscapeOutputBuilder::PostProcess(const AHoudiniNode* Node, const bool& bForce)
+{
+	if (!bForce)
+		return;
+
+	const double LandscapeUpdateStartTime = FPlatformTime::Seconds();
+	for (TActorIterator<ALandscape> LandscapeIter(Node->GetWorld()); LandscapeIter; ++LandscapeIter)
+	{
+		ALandscape* Landscape = *LandscapeIter;
+		// If NO landscape tile changed, then will NOT update anything
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 7)) || (ENGINE_MAJOR_VERSION > 5)
+		if (IsValid(Landscape) && !Landscape->IsUpToDate())
+			Landscape->ForceUpdateLayersContent();
+#else
+		if (IsValid(Landscape) && Landscape->HasLayersContent() && !Landscape->IsUpToDate())
+			Landscape->ForceUpdateLayersContent(false);
+#endif
+	}
+	const double LandscapeUpdateDuringTime = FPlatformTime::Seconds() - LandscapeUpdateStartTime;
+	if (LandscapeUpdateDuringTime > 0.001)
+		UE_LOG(LogHoudiniEngine, Log, TEXT("Update Landscapes Layer Content: %f (s)"), LandscapeUpdateDuringTime);
 }
 
 
