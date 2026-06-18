@@ -179,9 +179,13 @@ static FRay GetMouseRayFromView(const FViewport* Viewport, const FSceneView* Vie
 {
 	// See FViewportCursorLocation::FViewportCursorLocation
 	const FVector4 ScreenPos = View->CursorToScreen(Viewport->GetMouseX(), Viewport->GetMouseY(), 0);
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+	const FMatrix InvViewMatrix = View->ViewMatrices.GetViewToWorld();
+	const FMatrix InvProjMatrix = View->ViewMatrices.GetClipToView();
+#else
 	const FMatrix InvViewMatrix = View->ViewMatrices.GetInvViewMatrix();
 	const FMatrix InvProjMatrix = View->ViewMatrices.GetInvProjectionMatrix();
-
+#endif
 	const double ScreenX = ScreenPos.X;
 	const double ScreenY = ScreenPos.Y;
 

@@ -285,7 +285,7 @@ void FHoudiniAttribute::RetrieveAttributes(const TArray<const FProperty*>& Prope
 		if (const FBoolProperty* BoolProp = CastField<FBoolProperty>(Prop))
 		{
 			RETRIEVE_PROPERTY_TO_HOUDINI_ATTRIBUTE(TArray<int32>&AttribValues = Attrib->InitializeInt(Owner, 1); ,
-				AttribValues.Add(int32(BoolProp->GetPropertyValue(ValuePtr + Offset)));)
+				AttribValues.Add(int32(BoolProp->GetPropertyValue(ValuePtr)));)
 
 			continue;  // Parse finished
 		}

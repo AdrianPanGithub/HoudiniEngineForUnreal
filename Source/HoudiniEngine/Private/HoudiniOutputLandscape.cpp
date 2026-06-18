@@ -8,6 +8,7 @@
 #include "LandscapeStreamingProxy.h"
 #include "LandscapeEdit.h"
 #include "LandscapeConfigHelper.h"
+#include "TextureCompiler.h"
 #if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 6)) || (ENGINE_MAJOR_VERSION > 5)
 #include "LandscapeEditLayer.h"
 #endif
@@ -20,6 +21,112 @@
 
 
 #define INVALID_HEIGHTFIELD_EXTENT FIntRect(MAX_int32, MAX_int32, MIN_int32, MIN_int32)  // See ULandscapeInfo::GetLandscapeExtent
+
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+// UE 5.8+: FLandscapeTextureDataInfo's GetMipData/AddMipUpdateRegion
+// are no longer exported (no LANDSCAPE_API). This helper replicates the same behavior by
+// directly operating on UTexture2D::Source, managing Lock/Unlock and GPU upload.
+// Mirrors the lifecycle of FLandscapeTextureDataInfo: constructed once per texture, cached in a map,
+// and flushed/destroyed together at the end (deferred GPU upload pattern).
+struct FHoudiniLandscapeMipDataAccess
+{
+	UTexture2D* Texture;
+	void* MipData;
+	TArray<FUpdateTextureRegion2D> UpdateRegions;
+
+	explicit FHoudiniLandscapeMipDataAccess(UTexture2D* InTexture)
+		: Texture(InTexture)
+		, MipData(nullptr)
+	{
+		check(Texture);
+		Texture->TemporarilyDisableStreaming();
+		Texture->BlockOnAnyAsyncBuild();
+		MipData = Texture->Source.LockMip(0);
+	}
+
+	~FHoudiniLandscapeMipDataAccess()
+	{
+		if (MipData)
+		{
+			Texture->Source.UnlockMip(0);
+			MipData = nullptr;
+		}
+	}
+
+	// Upload modified regions to GPU. Returns true if a full resource update was needed
+	// (compressed texture), meaning the caller should FlushRenderingCommands afterwards.
+	// Mirrors FLandscapeTextureDataInfo::UpdateTextureData().
+	bool UpdateTextureData()
+	{
+		if (!MipData || UpdateRegions.Num() == 0)
+			return false;
+
+		const bool bCompressed = !Texture->CompressionNone;
+		if (bCompressed)
+		{
+			// Cannot update regions on compressed textures, update the whole resource
+			Texture->UpdateResource();
+			return true;
+		}
+
+		FTextureCompilingManager::Get().FinishCompilation({ Texture });
+
+		int32 DataSize = sizeof(FColor);
+		if (Texture->GetPixelFormat() == PF_G8)
+		{
+			DataSize = sizeof(uint8);
+		}
+
+		const uint32 SizeX = Texture->Source.GetSizeX();
+		const uint32 SizeY = Texture->Source.GetSizeY();
+		const uint32 SrcPitch = SizeX * DataSize;
+		const uint32 BufferSize = SizeX * SizeY * DataSize;
+
+		// Copy data for the render thread to avoid race conditions
+		uint8* DataCopy = (uint8*)FMemory::Malloc(BufferSize);
+		FMemory::Memcpy(DataCopy, MipData, BufferSize);
+
+		FUpdateTextureRegion2D* RegionsCopy = new FUpdateTextureRegion2D[UpdateRegions.Num()];
+		FMemory::Memcpy(RegionsCopy, UpdateRegions.GetData(),
+			UpdateRegions.Num() * sizeof(FUpdateTextureRegion2D));
+		const int32 NumRegions = UpdateRegions.Num();
+
+		Texture->UpdateTextureRegions(
+			0, NumRegions, RegionsCopy, SrcPitch, DataSize, DataCopy,
+			[](uint8* SrcData, const FUpdateTextureRegion2D* Regions)
+			{
+				FMemory::Free(SrcData);
+				delete[] Regions;
+			});
+
+		return false;
+	}
+
+	void* GetMipData() const { return MipData; }
+
+	void AddMipUpdateRegion(int32 InX1, int32 InY1, int32 InX2, int32 InY2)
+	{
+		const uint32 Width = 1 + InX2 - InX1;
+		const uint32 Height = 1 + InY2 - InY1;
+		const uint32 TexSizeX = Texture->Source.GetSizeX();
+		const uint32 TexSizeY = Texture->Source.GetSizeY();
+
+		// If the region covers the entire texture, collapse to a single full region
+		if (Width == TexSizeX && Height == TexSizeY)
+		{
+			UpdateRegions.Reset();
+			UpdateRegions.Emplace(0, 0, 0, 0, Width, Height);
+			return;
+		}
+
+		UpdateRegions.Emplace(InX1, InY1, InX1, InY1, Width, Height);
+	}
+
+	// Non-copyable
+	FHoudiniLandscapeMipDataAccess(const FHoudiniLandscapeMipDataAccess&) = delete;
+	FHoudiniLandscapeMipDataAccess& operator=(const FHoudiniLandscapeMipDataAccess&) = delete;
+};
+#endif // UE 5.8+
 
 bool FHoudiniLandscapeOutputBuilder::HapiIsPartValid(const int32& NodeId, const HAPI_PartInfo& PartInfo, bool& bOutIsValid, bool& bOutShouldHoldByOutput)
 {
@@ -65,6 +172,23 @@ struct FHoudiniLandscapeOutputHelper
 protected:
 	TArray<FLandscapeEditDataInterface*> LandscapeEdits;  // As LandscapeEdit will restore the uncompressed textures, which we could reuse when output multiple layers
 
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+	// UE 5.8+: Deferred texture data access map, mirrors FLandscapeTextureDataInterface::TextureDataMap.
+	// Multiple components sharing the same texture will reuse the same FHoudiniLandscapeMipDataAccess instance.
+	// GPU upload and unlock happen together in Release(), matching the official deferred flush pattern.
+	TMap<UTexture2D*, FHoudiniLandscapeMipDataAccess*> TextureDataMap;
+
+	FORCEINLINE FHoudiniLandscapeMipDataAccess* FindOrCreateMipDataAccess(UTexture2D* Texture)
+	{
+		if (FHoudiniLandscapeMipDataAccess** Found = TextureDataMap.Find(Texture))
+			return *Found;
+
+		FHoudiniLandscapeMipDataAccess* NewAccess = new FHoudiniLandscapeMipDataAccess(Texture);
+		TextureDataMap.Add(Texture, NewAccess);
+		return NewAccess;
+	}
+#endif
+
 	static void DeleteLayerAllocation(ULandscapeComponent* Component, const FGuid& InEditLayerGuid, int32 InLayerAllocationIdx, bool bInShouldDirtyPackage);
 
 	static bool DeleteLayerIfAllZero(ULandscapeComponent* const Component, const uint8* const TexDataPtr, int32 TexSize, int32 LayerIdx, bool bShouldDirtyPackage);
@@ -92,6 +216,23 @@ public:
 
 	FORCEINLINE void Release()
 	{
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+		// Flush all texture data to GPU first (deferred upload pattern)
+		bool bNeedToWaitForUpdate = false;
+		for (auto& Pair : TextureDataMap)
+		{
+			if (Pair.Value->UpdateTextureData())
+				bNeedToWaitForUpdate = true;
+		}
+		if (bNeedToWaitForUpdate)
+			FlushRenderingCommands();
+
+		// Destroy all FHoudiniLandscapeMipDataAccess (unlocks mips, clears flags)
+		for (auto& Pair : TextureDataMap)
+			delete Pair.Value;
+		TextureDataMap.Empty();
+#endif
+
 		for (FLandscapeEditDataInterface* LandscapeEdit : LandscapeEdits)
 			delete LandscapeEdit;
 
@@ -302,8 +443,13 @@ void FHoudiniLandscapeOutputHelper::SetWeightData(ULandscapeInfo* LandscapeInfo,
 
 			// Lock data for all the weightmaps
 			const TArray<UTexture2D*>& ComponentWeightmapTextures = Component->GetWeightmapTextures(true);
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+			FHoudiniLandscapeMipDataAccess* MipAccess = FindOrCreateMipDataAccess(ComponentWeightmapTextures[WeightmapIdx]);
+			uint8* LayerDataPtr = (uint8*)MipAccess->GetMipData() + ChannelOffsets[WeightmapChannel];
+#else
 			FLandscapeTextureDataInfo* TexDataInfo = LandscapeEdit.GetTextureDataInfo(ComponentWeightmapTextures[WeightmapIdx]);
 			uint8* LayerDataPtr = (uint8*)TexDataInfo->GetMipData(0) + ChannelOffsets[WeightmapChannel];
+#endif
 			bool bValueChanged = false;
 
 			// Find the texture data corresponding to this vertex
@@ -371,7 +517,11 @@ void FHoudiniLandscapeOutputHelper::SetWeightData(ULandscapeInfo* LandscapeInfo,
 					const int32 TexY1 = (SubsectionSizeQuads + 1) * SubIndexY + SubY1;
 					const int32 TexX2 = (SubsectionSizeQuads + 1) * SubIndexX + SubX2;
 					const int32 TexY2 = (SubsectionSizeQuads + 1) * SubIndexY + SubY2;
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+					MipAccess->AddMipUpdateRegion(TexX1, TexY1, TexX2, TexY2);
+#else
 					TexDataInfo->AddMipUpdateRegion(0, TexX1, TexY1, TexX2, TexY2);
+#endif
 					bValueChanged = true;
 					}
 				}
@@ -432,10 +582,13 @@ void FHoudiniLandscapeOutputHelper::SetHeightData(ULandscapeInfo* LandscapeInfo,
 			//UTexture2D* XYOffsetmapTexture = ToRawPtr(Component->XYOffsetmapTexture);
 
 			//Component->Modify(LandscapeEdit.GetShouldDirtyPackage());
-
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+			FHoudiniLandscapeMipDataAccess* MipAccess = FindOrCreateMipDataAccess(Heightmap);
+			FColor* HeightmapTextureData = (FColor*)MipAccess->GetMipData();
+#else
 			FLandscapeTextureDataInfo* TexDataInfo = LandscapeEdit.GetTextureDataInfo(Heightmap);
 			FColor* HeightmapTextureData = (FColor*)TexDataInfo->GetMipData(0);
-
+#endif
 			// Find the texture data corresponding to this vertex
 			int32 SizeU = Heightmap->Source.GetSizeX();
 			int32 SizeV = Heightmap->Source.GetSizeY();
@@ -508,12 +661,15 @@ void FHoudiniLandscapeOutputHelper::SetHeightData(ULandscapeInfo* LandscapeInfo,
 					int32 TexY1 = HeightmapOffsetY + (SubsectionSizeQuads + 1) * SubIndexY + SubY1;
 					int32 TexX2 = HeightmapOffsetX + (SubsectionSizeQuads + 1) * SubIndexX + SubX2;
 					int32 TexY2 = HeightmapOffsetY + (SubsectionSizeQuads + 1) * SubIndexY + SubY2;
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+					MipAccess->AddMipUpdateRegion(TexX1, TexY1, TexX2, TexY2);
+#else
 					TexDataInfo->AddMipUpdateRegion(0, TexX1, TexY1, TexX2, TexY2);
+#endif
 					bValueChanged = true;
 					}
 				}
 			}
-
 			if (bValueChanged)
 			{
 				Component->RequestHeightmapUpdate();

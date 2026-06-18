@@ -151,7 +151,11 @@ void FHoudiniActorComponentInputBuilder::AppendInfo(const TArray<const UActorCom
 
 	for (const auto& AssetRefIndices : AssetRefIndicesMap)
 	{
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+		TSharedPtr<FJsonValue>& JsonAssetInfoValue = JsonObject->Values.FindOrAdd(UE::FSharedString(AssetRefIndices.Key));
+#else
 		TSharedPtr<FJsonValue>& JsonAssetInfoValue = JsonObject->Values.FindOrAdd(AssetRefIndices.Key);
+#endif
 		if (JsonAssetInfoValue.IsValid())  // Has been added to JsonObject
 			continue;
 
@@ -515,7 +519,11 @@ void FHoudiniStaticMeshComponentInputBuilder::AppendInfo(const TArray<const UAct
 
 	for (const auto& AssetRefIndices : AssetRefIndicesMap)
 	{
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+		TSharedPtr<FJsonValue>& JsonAssetInfoValue = JsonObject->Values.FindOrAdd(UE::FSharedString(AssetRefIndices.Key));
+#else
 		TSharedPtr<FJsonValue>& JsonAssetInfoValue = JsonObject->Values.FindOrAdd(AssetRefIndices.Key);
+#endif
 		if (JsonAssetInfoValue.IsValid())  // Has been added to JsonObject
 			continue;
 
@@ -837,7 +845,11 @@ void FHoudiniSkinnedMeshComponentInputBuilder::AppendInfo(const TArray<const UAc
 
 	for (const auto& AssetRefIndices : AssetRefIndicesMap)
 	{
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+		TSharedPtr<FJsonValue>& JsonAssetInfoValue = JsonObject->Values.FindOrAdd(UE::FSharedString(AssetRefIndices.Key));
+#else
 		TSharedPtr<FJsonValue>& JsonAssetInfoValue = JsonObject->Values.FindOrAdd(AssetRefIndices.Key);
+#endif
 		if (JsonAssetInfoValue.IsValid())  // Has been added to JsonObject
 			continue;
 
@@ -1196,9 +1208,9 @@ bool FHoudiniDynamicMeshComponentInputBuilder::HapiUpload(UHoudiniInput* Input, 
 		for (int TriId = 0; TriId < NumPrims; ++TriId)
 		{
 			const UE::Geometry::FIndex3i Triangle = DM->GetTriangle(TriId);
-			*VertexDataPtr = Triangle.A;
+			*VertexDataPtr = Triangle.C;
 			*(VertexDataPtr + 1) = Triangle.B;
-			*(VertexDataPtr + 2) = Triangle.C;
+			*(VertexDataPtr + 2) = Triangle.A;
 			*(VertexDataPtr + 3) = HOUDINI_SHM_GEO_INPUT_POLY;
 			VertexDataPtr += 4;
 		}

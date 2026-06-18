@@ -3,7 +3,6 @@
 #include "HoudiniOutputs.h"
 #include "HoudiniOutputUtils.h"
 
-#include "Engine/UserDefinedStruct.h"
 #if WITH_EDITOR
 #include "EdGraphSchema_K2.h"
 #include "UserDefinedStructure/UserDefinedStructEditorData.h"

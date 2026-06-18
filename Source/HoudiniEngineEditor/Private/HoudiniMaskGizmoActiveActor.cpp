@@ -195,7 +195,11 @@ void AHoudiniMaskGizmoActiveActor::SetByteColor(const int32& Index, const FColor
 			ENQUEUE_RENDER_COMMAND(UpdateHoudiniMaskColor)(
 				[&](FRHICommandListImmediate& RHICmdList)
 				{
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+					RHICmdList.UpdateTexture2D(Resource->GetTexture2DRHI(), 0, FUpdateTextureRegion2D(
+#else
 					RHIUpdateTexture2D(Resource->GetTexture2DRHI(), 0, FUpdateTextureRegion2D(
+#endif
 						ChangedLocalExtent.Min.X, ChangedLocalExtent.Min.Y, 0, 0, ChangedLocalExtent.Width() + 1, ChangedLocalExtent.Height() + 1),
 						(ChangedLocalExtent.Width() + 1) * sizeof(FColor), (const uint8*)ColorDataPtr);
 				});
@@ -395,8 +399,12 @@ void AHoudiniMaskGizmoActiveActor::VisualizeMask()
 	ENQUEUE_RENDER_COMMAND(VisualizeMaskColor)(
 		[Resource, Resolution, ColorDataPtr](FRHICommandListImmediate& RHICmdList)
 		{
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+			RHICmdList.UpdateTexture2D(Resource->GetTexture2DRHI(), 0, FUpdateTextureRegion2D(0, 0, 0, 0, Resolution.X, Resolution.Y),
+#else
 			RHIUpdateTexture2D(Resource->GetTexture2DRHI(), 0, FUpdateTextureRegion2D(0, 0, 0, 0, Resolution.X, Resolution.Y),
-			Resolution.X * sizeof(FColor), (const uint8*)ColorDataPtr);
+#endif
+				Resolution.X * sizeof(FColor), (const uint8*)ColorDataPtr);
 		});
 
 	FlushRenderingCommands();
@@ -466,7 +474,11 @@ void AHoudiniMaskGizmoActiveActor::OnBrush(const bool& bBrushInversed)
 	ENQUEUE_RENDER_COMMAND(UpdateHoudiniMaskColor)(
 		[&](FRHICommandListImmediate& RHICmdList)
 		{
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+			RHICmdList.UpdateTexture2D(Resource->GetTexture2DRHI(), 0, FUpdateTextureRegion2D(
+#else
 			RHIUpdateTexture2D(Resource->GetTexture2DRHI(), 0, FUpdateTextureRegion2D(
+#endif
 				ChangedLocalExtent.Min.X, ChangedLocalExtent.Min.Y, 0, 0, ChangedLocalExtent.Width() + 1, ChangedLocalExtent.Height() + 1),
 				(ChangedLocalExtent.Width() + 1) * sizeof(FColor), (const uint8*)ColorDataPtr);
 		});

@@ -730,7 +730,11 @@ f[]@unreal_landscape_editlayers_weightmap_alpha = {11};)""");
 	}
 	if (IsValid(Landscape->LandscapeMaterial))  // After UE5.5, Layers will NOT automatically create from material, so we need get layer names manually
 	{
+#if ((ENGINE_MAJOR_VERSION == 5) && (ENGINE_MINOR_VERSION >= 8)) || (ENGINE_MAJOR_VERSION > 5)
+		const TArray<FName>& LayersInMat = UE::Landscape::RetrieveTargetLayerNamesFromMaterial(Landscape->LandscapeMaterial);
+#else
 		const TArray<FName>& LayersInMat = ALandscapeProxy::GetLayersFromMaterial(Landscape->LandscapeMaterial);
+#endif
 		for (const FName& LayerName : LayersInMat)
 		{
 			if (!ExistLayers.Contains(LayerName))

@@ -73,6 +73,7 @@ N.B. This list is NOT completed, for details please see [Source/HoudiniEngine/Pu
 - Landscape visibility layer now input as "**Alpha**", should look identical in unreal and houdini.
 - Landscape layers input support update while brushing.
 - Unreal spline input support import **custom properties** on your Blueprint.
+- Unreal spline now import as control points and v@unreal_spline_point_arrive_tangent, v@unreal_spline_point_leave_tangent, rather than resampled curve. Please use **he_convert_unreal_splines** Sop to convert.
 - **Texture input** support, See [he_example_terrain_stamp.hda](https://github.com/AdrianPanGithub/HoudiniEngineForUnreal/blob/HEAD/Resources/houdini/otls/examples/he_example_terrain_stamp.hda). This feature allow HDA working with **COPernicus**.
 - DataAsset input support (as point with d@unreal_object_metadata).
 - DynamicMeshComponent input support.
