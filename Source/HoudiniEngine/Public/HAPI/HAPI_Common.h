@@ -214,9 +214,11 @@ HAPI_C_ENUM_TYPEDEF( HAPI_StatusType )
 
 enum HAPI_StatusVerbosity
 {
-    HAPI_STATUSVERBOSITY_0,
-    HAPI_STATUSVERBOSITY_1,
-    HAPI_STATUSVERBOSITY_2,
+    HAPI_STATUSVERBOSITY_NONE = -1,
+
+    HAPI_STATUSVERBOSITY_0 = 0,
+    HAPI_STATUSVERBOSITY_1 = 1,
+    HAPI_STATUSVERBOSITY_2 = 2,
 
     /// Used for Results.  Equivalent to ::HAPI_STATUSVERBOSITY_2
     HAPI_STATUSVERBOSITY_ALL = HAPI_STATUSVERBOSITY_2,
@@ -258,6 +260,7 @@ enum HAPI_Result
     HAPI_RESULT_DISALLOWED_LC_ASSET_WITH_C_LICENSE      = 150,
     HAPI_RESULT_DISALLOWED_HENGINEINDIE_W_3PARTY_PLUGIN = 160,
     HAPI_RESULT_SHARED_MEMORY_BUFFER_OVERFLOW           = 170,
+    HAPI_RESULT_INVALID_SHARED_MEMORY_BUFFER            = 180,
 
     HAPI_RESULT_ASSET_INVALID                           = 200,
     HAPI_RESULT_NODE_INVALID                            = 210,
@@ -512,7 +515,8 @@ enum HAPI_NodeType
     HAPI_NODETYPE_VOP       = 1 << 6,
     HAPI_NODETYPE_DOP       = 1 << 7,
     HAPI_NODETYPE_TOP       = 1 << 8,
-    HAPI_NODETYPE_COP       = 1 << 9
+    HAPI_NODETYPE_COP       = 1 << 9,
+    HAPI_NODETYPE_LOP       = 1 << 10
 };
 HAPI_C_ENUM_TYPEDEF( HAPI_NodeType )
 typedef int HAPI_NodeTypeBits;
@@ -606,6 +610,15 @@ enum HAPI_InputCurveParameterization
     HAPI_CURVEPARAMETERIZATION_MAX
 };
 HAPI_C_ENUM_TYPEDEF( HAPI_InputCurveParameterization )
+
+enum HAPI_CameraProjectionType
+{
+    HAPI_CAMERAPROJECTIONTYPE_INVALID = -1,
+    HAPI_CAMERAPROJECTIONTYPE_PERSPECTIVE,
+    HAPI_CAMERAPROJECTIONTYPE_ORTHO,
+    HAPI_CAMERAPROJECTIONTYPE_MAX
+};
+HAPI_C_ENUM_TYPEDEF(HAPI_CameraProjectionType)
 
 enum HAPI_VolumeType
 {
@@ -724,6 +737,7 @@ enum HAPI_PartType
     HAPI_PARTTYPE_INSTANCER,
     HAPI_PARTTYPE_BOX,
     HAPI_PARTTYPE_SPHERE,
+    HAPI_PARTTYPE_CAMERA,
     HAPI_PARTTYPE_MAX
 };
 HAPI_C_ENUM_TYPEDEF( HAPI_PartType )
@@ -1449,7 +1463,7 @@ struct HAPI_API HAPI_ParmInfo
     /// the Browse Mode parameter property.
     HAPI_Permissions permissions;
 
-    /// Number of tags on this paramter.
+    /// Number of tags on this parameter.
     int tagCount;
 
     /// Tuple size. For scalar parameters this value is 1, but for vector
@@ -2043,6 +2057,31 @@ struct HAPI_API HAPI_SphereInfo
     float radius;
 };
 HAPI_C_STRUCT_TYPEDEF( HAPI_SphereInfo )
+
+/// Data for SOP camera primitives
+struct HAPI_API HAPI_CameraInfo
+{
+    double focal;
+    double aperture;
+    double pixelAspect;
+    double focusDistance;
+    double fStop;
+    double imagingDistance;
+    HAPI_Int64 resX;
+    HAPI_Int64 resY;
+    double cropX[ 2 ];
+    double cropY[ 2 ];
+    double winX[ 2 ];
+    double winY[ 2 ];
+    double clipNear;
+    double clipFar;
+    double shutterOpen;
+    double shutterClose;
+    double orthoZoom;
+    double guideScale;
+    HAPI_CameraProjectionType projection;
+};
+HAPI_C_STRUCT_TYPEDEF( HAPI_CameraInfo )
 
 // PDG Structs --------------------------------------------------------------
 

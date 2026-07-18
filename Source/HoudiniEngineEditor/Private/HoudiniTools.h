@@ -53,7 +53,8 @@ class UHoudiniBrushInputBehavior : public UInputBehavior
 public:
 	FORCEINLINE UHoudiniBrushTool* GetTool() const { return static_cast<UHoudiniBrushTool*>(GetOuter()); }
 
-	EInputDevices virtual GetSupportedDevices() override { return EInputDevices::Mouse | EInputDevices::Keyboard; }
+	virtual FInputCapturePriority GetPriority() override { return FInputCapturePriority(0); }
+	virtual EInputDevices GetSupportedDevices() override { return EInputDevices::Mouse | EInputDevices::Keyboard; }
 	virtual FInputCaptureRequest WantsCapture(const FInputDeviceState& InputState) override;
 	virtual FInputCaptureUpdate BeginCapture(const FInputDeviceState& InputState, EInputCaptureSide eSide) override;
 	virtual FInputCaptureUpdate UpdateCapture(const FInputDeviceState& InputState, const FInputCaptureData& CaptureData) override;

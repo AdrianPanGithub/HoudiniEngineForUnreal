@@ -18,7 +18,7 @@ See what can be achieved by Only using your HDAs and this custom HoudiniEngineFo
 [City toolchains](https://youtu.be/5Vp5nAFq1X8?si=IGSDG4cUdsefwn5x) and [Terrain toolchains](https://youtu.be/19gIzQGnSaU?si=-t7LaDjhUEc7hjMe)
 
 # Compatibility
-- Support Houdini >= 21.0.559, and Unreal Engine >= 5.4.
+- Support Houdini >= 22.0.368, and Unreal Engine >= 5.4.
 - Support Windows, macOS, and Linux.
 
 - NOT compatible with official plug-in, and can NOT work together with official one.
